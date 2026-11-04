@@ -1,131 +1,138 @@
-# Desk Buggy 🤖 — BMO & Baymax Dual-Character Animation
+# 🤖 Desk Buggy — Smart Desktop Companion & Retro Display Suite
 
-A retro animated desktop companion featuring **BMO** (*Adventure Time*) and **Baymax** (*Big Hero 6*), powered by ESP32 and a 1.8" ST7735 TFT SPI display.
+[![Platform: ESP32](https://img.shields.io/badge/Platform-ESP32%20%7C%20ESP32--C3-blue.svg?logo=espressif)](https://www.espressif.com/)
+[![Framework: Arduino](https://img.shields.io/badge/Framework-Arduino%2FC%2B%2B-00979D.svg?logo=arduino)](https://www.arduino.cc/)
+[![Build Tool: PlatformIO](https://img.shields.io/badge/Build-PlatformIO-orange.svg?logo=platformio)](https://platformio.org/)
+[![FPS: 60 FPS](https://img.shields.io/badge/Performance-Up%20to%2060%20FPS-brightgreen.svg)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Both characters are completely distinct and faithfully recreated with smooth, organic ~33 FPS animations rendered in RAM via `GFXcanvas16` double-buffering.
-
----
-
-## ✨ Characters & Expressions
-
-### 🤍 BAYMAX (*Big Hero 6*)
-Rendered on a seamless **pure white full display** with Baymax's iconic black eyes, connecting horizontal bridge, and authentic multi-stage eyelid physics (no circle boundary):
-
-1. `0` **Neutral / Awake**: Classic wide open solid black circular eyes with connecting bridge line.
-2. `1` **Happy / Satisfied Smile**: Cheeks push up lower eyelids (top half solid black, bottom half contoured outline).
-3. `2` **Skeptical / Squint**: Focused diagnostic squint with inward-slanted eyelids (`\ /`).
-4. `3` **Compassionate / Sad**: Empathetic puppy-dog eyes with outward-slanted eyelids (`/ \`) for when you are experiencing distress.
-5. `4` **Low Battery / Tired**: Heavy drooping upper eyelids hanging across the eyes with a sleepy side-to-side wobble.
-6. `5` **Sleeping / Resting**: Fully closed eyes with subtle outline and the connecting bridge.
-7. `6` **Medical Vitality Scan**: Animated cyan diagnostic laser beam sweeping up and down with multi-frequency scanner audio.
-8. `7` **Fist Bump ("Ba-la-la-la-la!")**: Joyful heart badge animation, celebratory chime arpeggio, and smiling eyes!
-
-#### Baymax Living Animations:
-- **Organic Inflatable Breathing**: Subtle, soft sinusoidal vertical bobbing that brings Baymax to life.
-- **Natural Multi-Stage Blink**: Transitions smoothly from Open ➔ Half-Lid ➔ Closed ➔ Half-Lid ➔ Open.
-- **Low-Battery Wobble**: Gentle drunken sinusoidal swaying when exhausted.
-- **Curious Glances**: Looks left and right naturally during idle moments.
+An open-source embedded graphics ecosystem featuring **four distinct projects** designed for the **ESP32** and **ESP32-C3 SuperMini** microcontrollers, driving color TFT and monochrome OLED displays with custom rendering engines.
 
 ---
 
-### 💚 BMO (*Adventure Time*)
-Classic mint-green console body with dark screen bezel, floppy cartridge slot, circular port, and 9 expressive facial modes:
+## 🗂️ Project Portfolio
 
-1. `0` **Grit / Strain**: Clenched squint eyes `> <`, rectangular grimacing teeth grid, and screen shake vibration.
-2. `1` **Wink / Talk**: Dot eye, playful wink curve, and animated open talking bean mouth.
-3. `2` **Sing / Shock**: Closed happy eyes `^ ^`, large round "O" mouth, and floating musical notes (♪ ♫).
-4. `3` **Content**: Closed smiling eyes `^ ^` with sweet gentle curved smile.
-5. `4` **Grin**: Classic dot eyes with wide open crescent grin.
-6. `5` **Laugh :D**: Chuckling open mouth `:D` with white teeth band and bouncing belly laugh.
-7. `6` **Cute Smile**: Signature BMO smile with natural blinks and idle glances.
-8. `7` **Worried / Crying**: Slanted sad eyes `\ /`, quivering wavy mouth, and falling teardrops.
-9. `8` **Deadpan / Neutral**: Solid dot eyes with flat horizontal line `—`.
+| Project | Target Microcontroller | Display Module | Frame Rate | Key Highlights | Location |
+|---|---|---|---|---|---|
+| **🤖 Desk Buggy** | ESP32-WROOM-32 (240MHz) | 1.8" ST7735 Color TFT (SPI) | ~33 FPS | BMO & Baymax animated companions, AS608 fingerprint touch gestures, buzzer audio | [`src/`](src/) |
+| **🖥️ Macintosh Desk Buddy** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | **60 FPS** | 7 retro 1984 Mac moods, animated cursive `"hello."`, System 1.0 desktop | [`macintosh-desk-buddy/`](macintosh-desk-buddy/) |
+| **🌡️ Macintosh Clock & Temp HUD** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 30 FPS | Live clock, on-chip silicon core temp (°C/°F), 64-pt scrolling graph, NTP sync | [`macintosh-clock-temp/`](macintosh-clock-temp/) |
+| **🔥 DOOM 60 FPS Engine** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | **60 FPS** | 128-ray 3D DDA raycaster, depth dithering, animated shotgun, 3D imps, PSX fire | [`doom-oled/`](doom-oled/) |
+
+---
+
+## 📚 Technical Design Specifications
+
+Complete architectural, electrical, and mathematical design documents are available in the [`docs/`](docs/) directory:
+
+- 🏛️ **[System Architecture (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md)** — Dual-MCU comparison, bus bandwidths (SPI vs 1.0 MHz I2C Fast Mode+), and memory layouts.
+- 🔌 **[Hardware Design & Pinouts (`docs/HARDWARE_DESIGN.md`)](docs/HARDWARE_DESIGN.md)** — Complete wiring matrices, schematics, electrical power budgets, and pull-up resistor guides.
+- 🎮 **[Engines Design Specification (`docs/ENGINES_DESIGN.md`)](docs/ENGINES_DESIGN.md)** — Breathing physics equations, DDA raycaster formulas, EMA temp filtering, and PSX fire cellular automata.
+
+---
+
+## ⚡ Master Hardware Pinouts
+
+### 1. ESP32-WROOM-32 + 1.8" ST7735 TFT (Desk Buggy)
+| ST7735 Pin | ESP32 GPIO | Function |
+|---|---|---|
+| **CS** | **GPIO 5** | SPI Chip Select |
+| **A0 / DC** | **GPIO 2** | Data / Command |
+| **RESET** | **GPIO 4** | Hardware Reset |
+| **SDA / MOSI** | **GPIO 23** | SPI Master Out |
+| **SCK / SCLK** | **GPIO 18** | SPI Clock |
+| **AS608 TX / RX**| **GPIO 16 / 17** | Optical Fingerprint UART2 |
+| **Buzzer (+)** | **GPIO 13** | PWM Audio Output |
+| **VCC / GND** | **3.3V / GND** | Power Rails |
+
+### 2. ESP32-C3 SuperMini + 0.96" SSD1306 OLED (Mac Desk Buddy / Clock / DOOM)
+| SSD1306 OLED Pin | ESP32-C3 SuperMini Pin | Function |
+|---|---|---|
+| **SDA** | **GPIO 8** | I2C Data (Fast Mode+ 1.0 MHz) |
+| **SCL** | **GPIO 9** | I2C Clock (Fast Mode+ 1.0 MHz) |
+| **VCC** | **3.3V** | System Power |
+| **GND** | **GND** | Ground |
 
 ---
 
 ## ⌨️ Serial Interactive Commands (115200 baud)
 
-Open the Serial Monitor to interact with your Desk Buggy:
+### Desk Buggy (BMO & Baymax)
+- `c` or `m` — Toggle between **BMO** and **Baymax**
+- `0` to `8` — Jump to specific facial expression
+- `a` — Toggle autonomous idle breathing & blinking
+- `s` — Trigger medical scan laser (Baymax) or chirp (BMO)
+- `b` — Trigger natural multi-stage blink
 
-| Command | Action |
-|---|---|
-| `c` or `m` | **Switch Character Mode** (BMO ⟷ Baymax) |
-| `1` | Select **BMO** mode directly |
-| `2` | Select **Baymax** mode directly |
-| `0` – `8` | Jump to expression in active character |
-| `SPACE` or `n` | Step to the **next** expression |
-| `p` | Step to the **previous** expression |
-| `a` | Toggle **Autonomous Life Mode** ON / OFF |
-| `b` | Trigger a manual smooth blink |
-| `s` | Trigger **Medical Scan** (Baymax) or **Chirp** (BMO) |
+### DOOM 60 FPS Engine
+- `w` / `s` — Move forward / backward
+- `a` / `d` — Rotate left / right
+- `SPACE` or `f` — **Fire Double-Barrel Shotgun!**
+- `m` — Toggle 2D radar mini-map overlay
+- `auto` — Toggle autonomous marine bot patrol AI
+- `1` / `2` / `3` — Switch between 3D Raycaster, PSX DOOM Fire, and Doomguy Showcase
 
----
-
-## 👆 Hardware Touch & Fingerprint Interactions (AS608)
-
-- **Single Tap**:
-  - In **Baymax Mode**: Triggers the iconic **Fist Bump** ("Ba-la-la-la-la!") with heart animation and celebratory audio!
-  - In **BMO Mode**: BMO giggles happily (`EXP_LAUGH`) with a double chirp.
-- **Double Tap** (within 600ms):
-  - Instantly toggles between **BMO** and **Baymax**!
-
----
-
-## 🔌 Hardware Wiring
-
-### ESP32 to 1.8" ST7735 TFT SPI Display
-
-| ST7735 Pin | ESP32 GPIO | Description |
-|---|---|---|
-| **CS** | **GPIO 5** | Chip Select |
-| **A0 / DC** | **GPIO 2** | Data / Command |
-| **RESET / RST** | **GPIO 4** | Hardware Reset |
-| **SDA / MOSI** | **GPIO 23** | SPI Master Out |
-| **SCK / SCLK** | **GPIO 18** | SPI Clock |
-| **VCC** | **3.3V** or **5V** | Power |
-| **GND** | **GND** | Ground |
-
-### Optional Peripherals
-
-| Peripheral | ESP32 GPIO | Note |
-|---|---|---|
-| **Buzzer** | **GPIO 13** | Active or Passive buzzer |
-| **AS608 Fingerprint TX** | **GPIO 16** | ESP32 RX2 |
-| **AS608 Fingerprint RX** | **GPIO 17** | ESP32 TX2 |
+### Macintosh Clock & Temp HUD
+- `mode` — Cycle display modes (Window HUD, Giant Clock, Temp Graph)
+- `time HH:MM:SS` — Set digital clock time manually
+- `date YYYY-MM-DD` — Set date manually
+- `wifi <SSID> <PASSWORD>` — Connect to Wi-Fi and sync via NTP internet time
+- `temp` — Print live raw & filtered core temperatures
 
 ---
 
 ## 🚀 Building & Flashing
 
+This project uses [PlatformIO](https://platformio.org/).
+
+### Flash Desk Buggy (ESP32-WROOM-32)
 ```bash
-# Build firmware
-pio run
-
-# Flash to ESP32
+# Build & upload to ESP32
 pio run -t upload
+pio device monitor -b 115200
+```
 
-# Open Serial Monitor
+### Flash DOOM 60 FPS (ESP32-C3 SuperMini)
+```bash
+cd doom-oled
+pio run -t upload
+pio device monitor -b 115200
+```
+
+### Flash Macintosh Desk Buddy (ESP32-C3 SuperMini)
+```bash
+cd macintosh-desk-buddy
+pio run -t upload
+pio device monitor -b 115200
+```
+
+### Flash Macintosh Clock & Temp HUD (ESP32-C3 SuperMini)
+```bash
+cd macintosh-clock-temp
+pio run -t upload
 pio device monitor -b 115200
 ```
 
 ---
 
-## 🖥️ Sub-Projects for ESP32-C3 SuperMini + 0.96" OLED
+## 🛠️ Repository Organization
 
-### 1. Macintosh Clock & Temp HUD ([`macintosh-clock-temp/`](macintosh-clock-temp/))
-- **Features:** Real-time clock HUD, live hardware core temperature readout (°C/°F), moving average filter, live 64-sample temperature history graph, and optional Wi-Fi NTP auto-sync.
-- **Display Modes:** System Status Window (``), Giant Retro Digital Clock & Temp, and Real-time Scrolling Temp Graph.
-- See [`macintosh-clock-temp/README.md`](macintosh-clock-temp/README.md) for full documentation, wiring, and serial commands.
+```text
+desk-buggy/
+├── docs/                      # Architectural & Hardware Design Specs
+│   ├── ARCHITECTURE.md        # System architecture, bus bandwidth, dual-MCU specs
+│   ├── HARDWARE_DESIGN.md     # Wiring matrices, pinouts, and electrical budgets
+│   └── ENGINES_DESIGN.md      # Rendering formulas, DDA raycaster, and state machines
+├── src/                       # Project 1: Desk Buggy (BMO & Baymax 1.8" TFT)
+├── doom-oled/                 # Project 2: DOOM 60 FPS 3D Raycaster (0.96" OLED)
+├── macintosh-desk-buddy/      # Project 3: Macintosh Desk Buddy 60 FPS (0.96" OLED)
+├── macintosh-clock-temp/      # Project 4: Macintosh Clock & Temp HUD (0.96" OLED)
+├── tools/                     # Helper flashing and port diagnosis utilities
+├── platformio.ini             # Root PlatformIO configuration
+└── README.md                  # Project landing page
+```
 
-### 2. Macintosh Desk Buddy ([`macintosh-desk-buddy/`](macintosh-desk-buddy/))
-- **Target MCU:** ESP32-C3 SuperMini (RISC-V)
-- **Display:** 0.96" I2C OLED (SSD1306, 128x64) on SDA=GPIO 8, SCL=GPIO 9
-- **Features:** 7 retro 1984 Macintosh animated moods (Happy Mac, Wink, Thinking with rotating watch cursor, Classic System 1.0 Desktop with mouse cursor, Sleepy Zzz, and cursive "hello." boot intro).
-- See [`macintosh-desk-buddy/README.md`](macintosh-desk-buddy/README.md) for full documentation and wiring.
+---
 
-### 3. DOOM 60 FPS Engine ([`doom-oled/`](doom-oled/))
-- **Target MCU:** ESP32-C3 SuperMini (RISC-V @ 160MHz)
-- **Display:** 0.96" I2C OLED (SSD1306, 128x64) on SDA=GPIO 8, SCL=GPIO 9
-- **Features:** 3D DDA Raycaster engine casting 128 rays, depth dithering, directional lighting, 3D Imp & Barrel sprites, double-barrel shotgun with recoil/muzzle flash/pump reload, animated Doomguy status bar face, live 60 FPS counter, procedural PSX DOOM Fire simulator, and autonomous marine bot AI.
-- See [`doom-oled/README.md`](doom-oled/README.md) for full documentation, controls, and wiring.
-
+## 📜 License
+Distributed under the **MIT License**. Created with passion for retro computing and embedded systems.
