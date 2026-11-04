@@ -69,3 +69,4 @@ cd weather-clock-station
 # Open Serial Monitor
 ~/.venv/bin/python -m platformio device monitor -b 115200
 ```
+
