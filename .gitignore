@@ -1,7 +1,28 @@
+# PlatformIO
 .pio/
-.vscode/
-.venv/
-__pycache__/
-*.pyc
-.DS_Store
+**/.pio/
+*.bin
+*.elf
+*.hex
 
+# IDEs & Editors
+.vscode/
+**/.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+
+# Python
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# OS Artifacts
+.DS_Store
+**/.DS_Store
+Thumbs.db
