@@ -18,6 +18,7 @@ An open-source embedded graphics ecosystem featuring **four distinct projects** 
 | **🖥️ Macintosh Desk Buddy** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | **60 FPS** | 7 retro 1984 Mac moods, animated cursive `"hello."`, System 1.0 desktop | [`macintosh-desk-buddy/`](macintosh-desk-buddy/) |
 | **🌡️ Macintosh Clock & Temp HUD** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 30 FPS | Live clock, on-chip silicon core temp (°C/°F), 64-pt scrolling graph, NTP sync | [`macintosh-clock-temp/`](macintosh-clock-temp/) |
 | **🔥 DOOM 60 FPS Engine** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | **60 FPS** | 128-ray 3D DDA raycaster, depth dithering, animated shotgun, 3D imps, PSX fire | [`doom-oled/`](doom-oled/) |
+| **☀️ Weather & Clock Station** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 33 FPS | Live Open-Meteo weather API, location badge, temp/humidity/wind, NTP clock, celestial sky arc | [`weather-clock-station/`](weather-clock-station/) |
 
 ---
 
@@ -79,6 +80,14 @@ Complete architectural, electrical, and mathematical design documents are availa
 - `wifi <SSID> <PASSWORD>` — Connect to Wi-Fi and sync via NTP internet time
 - `temp` — Print live raw & filtered core temperatures
 
+### Smart Weather & Clock Station
+- `wifi <SSID> <PASSWORD>` — Connect to local Wi-Fi and auto-sync NTP & Open-Meteo
+- `city <tokyo|london|ny|sf|blr|paris>` — Select city preset
+- `loc <LAT> <LON> <CITY>` — Set custom GPS coordinates and city name
+- `unit <C|F>` — Toggle Celsius / Fahrenheit
+- `mode` — Cycle dashboard views (Main Station, Atmosphere Vitals, Celestial Sky Arc)
+- `auto` — Toggle 8-second auto-cycling cards ON / OFF
+
 ---
 
 ## 🚀 Building & Flashing
@@ -113,6 +122,13 @@ pio run -t upload
 pio device monitor -b 115200
 ```
 
+### Flash Weather & Clock Station (ESP32-C3 SuperMini)
+```bash
+cd weather-clock-station
+pio run -t upload
+pio device monitor -b 115200
+```
+
 ---
 
 ## 🛠️ Repository Organization
@@ -127,6 +143,7 @@ desk-buggy/
 ├── doom-oled/                 # Project 2: DOOM 60 FPS 3D Raycaster (0.96" OLED)
 ├── macintosh-desk-buddy/      # Project 3: Macintosh Desk Buddy 60 FPS (0.96" OLED)
 ├── macintosh-clock-temp/      # Project 4: Macintosh Clock & Temp HUD (0.96" OLED)
+├── weather-clock-station/     # Project 5: Smart Weather & Clock Station (0.96" OLED)
 ├── tools/                     # Helper flashing and port diagnosis utilities
 ├── platformio.ini             # Root PlatformIO configuration
 └── README.md                  # Project landing page
