@@ -81,13 +81,13 @@ void setup() {
     while (1) delay(100);
   }
 
-  // 1.0 MHz Fast Mode+ I2C bus clock for instant rendering
-  Wire.setClock(1000000);
+  // Standard reliable 400 kHz Fast Mode I2C clock
+  Wire.setClock(400000);
 
-  // Decrease OLED brightness to soft, eye-friendly contrast level
-  display.dim(true);
+  // Set crisp, clearly visible, comfortable contrast (no black screen dimming)
+  display.dim(false);
   display.ssd1306_command(SSD1306_SETCONTRAST);
-  display.ssd1306_command(0x05); // Low, soft contrast (0x01 - 0x0A range)
+  display.ssd1306_command(0x7F); // 0x7F (127): Crisp, clear, well-balanced brightness
 
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
@@ -173,9 +173,9 @@ void loop() {
     }
   }
 
-  // Enforce locked 60 FPS frame rate
+  // Rock-solid 30 FPS refresh rate (gives SSD1306 charge pump and I2C bus plenty of headroom)
   unsigned long frameDuration = micros() - frameStart;
-  const unsigned long TARGET_FRAME_US = 16666;
+  const unsigned long TARGET_FRAME_US = 33333;
   if (frameDuration < TARGET_FRAME_US) {
     delayMicroseconds(TARGET_FRAME_US - frameDuration);
   }
