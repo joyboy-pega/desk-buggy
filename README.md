@@ -19,6 +19,7 @@ An open-source embedded graphics ecosystem featuring **four distinct projects** 
 | **🌡️ Macintosh Clock & Temp HUD** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 30 FPS | Live clock, on-chip silicon core temp (°C/°F), 64-pt scrolling graph, NTP sync | [`macintosh-clock-temp/`](macintosh-clock-temp/) |
 | **🔥 DOOM 60 FPS Engine** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | **60 FPS** | 128-ray 3D DDA raycaster, depth dithering, animated shotgun, 3D imps, PSX fire | [`doom-oled/`](doom-oled/) |
 | **☀️ Weather & Clock Station** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 33 FPS | Live Open-Meteo weather API, location badge, temp/humidity/wind, NTP clock, celestial sky arc | [`weather-clock-station/`](weather-clock-station/) |
+| **🌈 Color TFT Weather Station**| ESP32-C3 SuperMini (160MHz) | 1.8" ST7735 Color TFT (SPI) | 30 FPS | Full 16-bit RGB565 color dashboard, Pune weather, NTP clock, auto-shuts OLED OFF | [`tft-weather-station/`](tft-weather-station/) |
 
 ---
 
