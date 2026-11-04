@@ -123,3 +123,9 @@ pio device monitor -b 115200
 - **Features:** 7 retro 1984 Macintosh animated moods (Happy Mac, Wink, Thinking with rotating watch cursor, Classic System 1.0 Desktop with mouse cursor, Sleepy Zzz, and cursive "hello." boot intro).
 - See [`macintosh-desk-buddy/README.md`](macintosh-desk-buddy/README.md) for full documentation and wiring.
 
+### 3. DOOM 60 FPS Engine ([`doom-oled/`](doom-oled/))
+- **Target MCU:** ESP32-C3 SuperMini (RISC-V @ 160MHz)
+- **Display:** 0.96" I2C OLED (SSD1306, 128x64) on SDA=GPIO 8, SCL=GPIO 9
+- **Features:** 3D DDA Raycaster engine casting 128 rays, depth dithering, directional lighting, 3D Imp & Barrel sprites, double-barrel shotgun with recoil/muzzle flash/pump reload, animated Doomguy status bar face, live 60 FPS counter, procedural PSX DOOM Fire simulator, and autonomous marine bot AI.
+- See [`doom-oled/README.md`](doom-oled/README.md) for full documentation, controls, and wiring.
+
