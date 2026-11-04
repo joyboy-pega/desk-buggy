@@ -63,3 +63,4 @@ const unsigned char PROGMEM chip_icon[] = {
 };
 
 #endif // MAC_BITMAPS_H
+

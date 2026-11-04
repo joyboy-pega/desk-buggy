@@ -59,3 +59,4 @@ cd "/Users/joy/Desktop/project/tea party/desk buggy/macintosh-clock-temp"
 # Open Serial Monitor
 python3 -m serial.tools.miniterm /dev/cu.usbmodem* 115200
 ```
+
