@@ -84,6 +84,11 @@ void setup() {
   // 1.0 MHz Fast Mode+ I2C bus clock for instant rendering
   Wire.setClock(1000000);
 
+  // Decrease OLED brightness to soft, eye-friendly contrast level
+  display.dim(true);
+  display.ssd1306_command(SSD1306_SETCONTRAST);
+  display.ssd1306_command(0x05); // Low, soft contrast (0x01 - 0x0A range)
+
   display.clearDisplay();
   display.setTextColor(SSD1306_WHITE);
 
@@ -153,6 +158,18 @@ void loop() {
         Serial.printf("[WIFI] New credentials: '%s'\n", wifiSSID.c_str());
         WiFi.disconnect();
       }
+    } else if (cmd.startsWith("bright ")) {
+      int b = cmd.substring(7).toInt();
+      if (b < 1) b = 1;
+      if (b > 255) b = 255;
+      display.ssd1306_command(SSD1306_SETCONTRAST);
+      display.ssd1306_command(b);
+      Serial.printf("[BRIGHTNESS] Contrast set to %d\n", b);
+    } else if (cmd.equalsIgnoreCase("dim")) {
+      display.dim(true);
+      display.ssd1306_command(SSD1306_SETCONTRAST);
+      display.ssd1306_command(0x01);
+      Serial.println(F("[BRIGHTNESS] Minimum dim contrast activated"));
     }
   }
 
