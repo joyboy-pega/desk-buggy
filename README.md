@@ -107,3 +107,14 @@ pio run -t upload
 # Open Serial Monitor
 pio device monitor -b 115200
 ```
+
+---
+
+## 🖥️ Sub-Project: Macintosh Desk Buddy (ESP32-C3 SuperMini + 0.96" OLED)
+
+A dedicated, standalone companion located in [`macintosh-desk-buddy/`](macintosh-desk-buddy/):
+- **Target MCU:** ESP32-C3 SuperMini (RISC-V)
+- **Display:** 0.96" I2C OLED (SSD1306, 128x64) on SDA=GPIO 8, SCL=GPIO 9
+- **Features:** 7 retro 1984 Macintosh animated moods (Happy Mac, Wink, Thinking with rotating watch cursor, Classic System 1.0 Desktop with mouse cursor, Sleepy Zzz, and cursive "hello." boot intro).
+- See [`macintosh-desk-buddy/README.md`](macintosh-desk-buddy/README.md) for full documentation and wiring.
+
