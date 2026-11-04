@@ -31,20 +31,20 @@ bool wifiConnected = false;
 unsigned long lastWifiAttempt = 0;
 
 // Geolocation & City
-String cityName = "BENGALURU";
-float latitude = 12.9716f;
-float longitude = 77.5946f;
-long gmtOffsetSec = 19800; // Default IST +5:30 (19800 sec)
+String cityName = "PUNE";
+float latitude = 18.5204f;
+float longitude = 73.8567f;
+long gmtOffsetSec = 19800; // IST +5:30 (19800 sec)
 int daylightOffsetSec = 0;
 
 // Weather Metrics
-float currentTemp = 24.5f;
-int currentHumidity = 62;
-float currentWindSpeed = 11.2f;
-int weatherCode = 1; // 0=Clear, 1-2=Partly cloudy, 3=Cloudy, 61=Rain, 95=Storm
-String weatherCondition = "PARTLY CLOUDY";
-float minTemp = 19.0f;
-float maxTemp = 28.5f;
+float currentTemp = 23.5f;
+int currentHumidity = 58;
+float currentWindSpeed = 9.8f;
+int weatherCode = 0; // Clear Sky
+String weatherCondition = "CLEAR SKY";
+float minTemp = 17.0f;
+float maxTemp = 30.5f;
 unsigned long lastWeatherFetch = 0;
 const unsigned long WEATHER_INTERVAL_MS = 600000; // 10 minutes
 
@@ -446,7 +446,9 @@ void handleSerialCommands() {
     } else if (line.startsWith("city ")) {
       String c = line.substring(5);
       c.toLowerCase();
-      if (c == "tokyo") {
+      if (c == "pune") {
+        cityName = "PUNE"; latitude = 18.5204f; longitude = 73.8567f; gmtOffsetSec = 19800;
+      } else if (c == "tokyo") {
         cityName = "TOKYO"; latitude = 35.6895f; longitude = 139.6917f; gmtOffsetSec = 32400;
       } else if (c == "london") {
         cityName = "LONDON"; latitude = 51.5074f; longitude = -0.1278f; gmtOffsetSec = 0;
