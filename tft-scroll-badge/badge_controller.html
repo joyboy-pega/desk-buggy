@@ -197,11 +197,26 @@
           </div>
         </div>
 
-        <!-- 3. Size & Speed Sliders -->
+        <!-- 3. Size, Speed & Brightness Sliders -->
         <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
           <label class="block text-sm font-semibold text-[var(--foreground)]">
-            ⚙️ Display Dynamics & Typography
+            ⚙️ Display Dynamics & Brightness
           </label>
+
+          <!-- Brightness Slider -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+              <span class="text-[var(--muted-foreground)]">💡 Display Brightness</span>
+              <span id="labelBrightness" class="font-mono font-semibold">100% (255)</span>
+            </div>
+            <input type="range" id="sliderBrightness" min="15" max="255" value="255" step="5" class="w-full accent-pink-500">
+            <div class="flex gap-1.5 pt-1">
+              <button class="bright-preset px-2 py-0.5 rounded text-[11px] bg-[var(--accent)] hover:border-pink-500 border border-transparent font-mono" data-val="255">100%</button>
+              <button class="bright-preset px-2 py-0.5 rounded text-[11px] bg-[var(--accent)] hover:border-pink-500 border border-transparent font-mono" data-val="191">75%</button>
+              <button class="bright-preset px-2 py-0.5 rounded text-[11px] bg-[var(--accent)] hover:border-pink-500 border border-transparent font-mono" data-val="128">50%</button>
+              <button class="bright-preset px-2 py-0.5 rounded text-[11px] bg-[var(--accent)] hover:border-pink-500 border border-transparent font-mono" data-val="64">25% (Night)</button>
+            </div>
+          </div>
 
           <!-- Text Size Slider -->
           <div class="space-y-1.5">
@@ -245,6 +260,7 @@
     let textColor = "#000000";
     let textSize = 5;
     let scrollSpeed = 2.5;
+    let displayBrightness = 255;
     let isPaused = false;
     let isRotated180 = true;
     let serialPort = null;
@@ -260,8 +276,10 @@
     const pickerText = document.getElementById('pickerText');
     const sliderSize = document.getElementById('sliderSize');
     const sliderSpeed = document.getElementById('sliderSpeed');
+    const sliderBrightness = document.getElementById('sliderBrightness');
     const labelSize = document.getElementById('labelSize');
     const labelSpeed = document.getElementById('labelSpeed');
+    const labelBrightness = document.getElementById('labelBrightness');
     const btnPause = document.getElementById('btnPause');
     const btnFlip = document.getElementById('btnFlip');
     const btnResetHangry = document.getElementById('btnResetHangry');
@@ -300,6 +318,11 @@
 
       labelSize.textContent = `Size ${textSize} (${pxH}px)`;
       labelSpeed.textContent = `${scrollSpeed.toFixed(1)} px/frame`;
+
+      // Brightness filter for live simulator
+      const brightRatio = displayBrightness / 255.0;
+      simScreen.style.filter = `brightness(${Math.max(0.2, brightRatio)})`;
+      labelBrightness.textContent = `${Math.round(brightRatio * 100)}% (${displayBrightness})`;
 
       // Update command
       codeCommand.textContent = `msg ${currentMessage}`;
@@ -373,6 +396,22 @@
       scrollSpeed = parseFloat(e.target.value);
       applyVisuals();
       sendSerialCommand(`speed ${scrollSpeed.toFixed(1)}\n`);
+    });
+
+    // Brightness Slider & Presets
+    sliderBrightness.addEventListener('input', (e) => {
+      displayBrightness = parseInt(e.target.value);
+      applyVisuals();
+      sendSerialCommand(`bright ${displayBrightness}\n`);
+    });
+
+    document.querySelectorAll('.bright-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        displayBrightness = parseInt(btn.dataset.val);
+        sliderBrightness.value = displayBrightness;
+        applyVisuals();
+        sendSerialCommand(`bright ${displayBrightness}\n`);
+      });
     });
 
     // Controls
@@ -459,7 +498,7 @@
       }
       const bg565 = hexToRgb565(bgColor);
       const text565 = hexToRgb565(textColor);
-      const url = `${ip}/update?msg=${encodeURIComponent(currentMessage)}&size=${textSize}&speed=${scrollSpeed}&bg=0x${bg565.toString(16)}&text=0x${text565.toString(16)}`;
+      const url = `${ip}/update?msg=${encodeURIComponent(currentMessage)}&size=${textSize}&speed=${scrollSpeed}&bg=0x${bg565.toString(16)}&text=0x${text565.toString(16)}&bright=${displayBrightness}`;
       window.open(url, '_blank');
     });
 

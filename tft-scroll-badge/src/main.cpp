@@ -18,6 +18,7 @@
 #define TFT_RST   4   // Hardware Reset (GPIO 4)
 #define TFT_MOSI 23   // Hardware VSPI MOSI / SDA (GPIO 23)
 #define TFT_SCLK 18   // Hardware VSPI SCLK / SCK (GPIO 18)
+#define TFT_BL   32   // Optional Hardware Backlight PWM Pin
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 
@@ -25,6 +26,7 @@ Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 GFXcanvas16* canvas = nullptr;
 const int SCREEN_W = 160;
 const int SCREEN_H = 128;
+uint8_t displayBrightness = 255; // 0 to 255 (Full brightness)
 
 // ----------------------------------------------------------------------------
 // Wi-Fi Credentials & Built-In Web Server
@@ -149,6 +151,9 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       <input type="color" id="cTx" value="#000000" onchange="updateColors()">
     </div>
 
+    <label id="lblBr">Brightness: 100%</label>
+    <input type="range" id="rBr" min="15" max="255" value="255" oninput="updateBrightness(this.value)">
+
     <label id="lblSz">Text Size: 5 (40px)</label>
     <input type="range" id="rSz" min="2" max="7" value="5" oninput="updateSize(this.value)">
 
@@ -164,6 +169,12 @@ const char INDEX_HTML[] PROGMEM = R"rawliteral(
       document.getElementById('pv').style.color = tx;
       document.getElementById('pv').style.borderColor = tx;
       fetch(`/update?bg=${encodeURIComponent(bg)}&text=${encodeURIComponent(tx)}`);
+    }
+    function updateBrightness(v) {
+      let pct = Math.round((v / 255) * 100);
+      document.getElementById('lblBr').textContent = `Brightness: ${pct}%`;
+      document.getElementById('pv').style.filter = `brightness(${Math.max(0.2, v/255)})`;
+      fetch(`/update?bright=${v}`);
     }
     function pushText() {
       let msg = document.getElementById('t').value;
@@ -203,6 +214,10 @@ void setup() {
   Serial.println("\n\n========================================================");
   Serial.println("  1.8\" ST7735 TFT Hangry Mood Badge & Web Studio        ");
   Serial.println("========================================================");
+
+  // Setup Backlight PWM
+  pinMode(TFT_BL, OUTPUT);
+  analogWrite(TFT_BL, displayBrightness);
 
   // Initialize Hardware SPI on ESP32 VSPI pins
   SPI.begin(TFT_SCLK, -1, TFT_MOSI, TFT_CS);
@@ -295,9 +310,27 @@ void setupWebServer() {
       tft.setRotation(screenRotation);
       Serial.printf("[WEB] Flipped 180°. Rotation: %d\n", screenRotation);
     }
+    if (server.hasArg("bright")) {
+      int b = server.arg("bright").toInt();
+      displayBrightness = (uint8_t)constrain(b, 0, 255);
+      analogWrite(TFT_BL, displayBrightness);
+      Serial.printf("[WEB] Brightness updated: %d\n", displayBrightness);
+    }
 
     server.send(200, "application/json", "{\"status\":\"ok\"}");
   });
+}
+
+// Software Dimming function: Scales RGB565 color brightness (works on all screens)
+uint16_t scaleBrightness(uint16_t color, uint8_t brightness) {
+  if (brightness >= 255) return color;
+  uint8_t r = (color >> 11) & 0x1F;
+  uint8_t g = (color >> 5) & 0x3F;
+  uint8_t b = color & 0x1F;
+  r = (r * brightness) / 255;
+  g = (g * brightness) / 255;
+  b = (b * brightness) / 255;
+  return (r << 11) | (g << 5) | b;
 }
 
 // Convert HTML Hex String ("#FF80DF" or "0xFC79") to 16-bit RGB565
@@ -345,17 +378,20 @@ void loop() {
 // Double-Buffered Frame Renderer (Zero Tearing / Zero Flicker)
 // ============================================================================
 void renderBadgeFrame() {
+  uint16_t effBg = scaleBrightness(colorBg, displayBrightness);
+  uint16_t effText = scaleBrightness(colorText, displayBrightness);
+
   if (canvas) {
     // 1. Fill background with pastel color
-    canvas->fillScreen(colorBg);
+    canvas->fillScreen(effBg);
 
     // 2. Retro pixel border
-    canvas->drawRect(1, 1, SCREEN_W - 2, SCREEN_H - 2, colorText);
-    canvas->drawRect(3, 3, SCREEN_W - 6, SCREEN_H - 6, colorText);
+    canvas->drawRect(1, 1, SCREEN_W - 2, SCREEN_H - 2, effText);
+    canvas->drawRect(3, 3, SCREEN_W - 6, SCREEN_H - 6, effText);
 
     // 3. Render scrolling pixel text
     canvas->setTextSize(textSize);
-    canvas->setTextColor(colorText);
+    canvas->setTextColor(effText);
     canvas->setTextWrap(false);
 
     int fontH = 8 * textSize;
@@ -368,9 +404,9 @@ void renderBadgeFrame() {
     tft.drawRGBBitmap(0, 0, canvas->getBuffer(), SCREEN_W, SCREEN_H);
 
   } else {
-    tft.fillScreen(colorBg);
+    tft.fillScreen(effBg);
     tft.setTextSize(textSize);
-    tft.setTextColor(colorText);
+    tft.setTextColor(effText);
     tft.setTextWrap(false);
     tft.setCursor((int)scrollX, (SCREEN_H - 8 * textSize) / 2);
     tft.print(currentMessage);
@@ -431,6 +467,25 @@ void handleSerialCommands() {
         tft.setRotation(screenRotation);
         Serial.printf("[BADGE] Rotation set to: %d\n", screenRotation);
       }
+    } else if (line.startsWith("bright ")) {
+      String bStr = line.substring(7);
+      if (bStr.endsWith("%")) {
+        int pct = bStr.substring(0, bStr.length() - 1).toInt();
+        displayBrightness = (uint8_t)map(constrain(pct, 0, 100), 0, 100, 0, 255);
+      } else {
+        int val = bStr.toInt();
+        displayBrightness = (uint8_t)constrain(val, 0, 255);
+      }
+      analogWrite(TFT_BL, displayBrightness);
+      Serial.printf("[BADGE] Brightness set to: %d (%d%%)\n", displayBrightness, (displayBrightness * 100) / 255);
+    } else if (line == "+" || line == "=") {
+      if (displayBrightness <= 235) displayBrightness += 20; else displayBrightness = 255;
+      analogWrite(TFT_BL, displayBrightness);
+      Serial.printf("[BADGE] Brightness: %d (%d%%)\n", displayBrightness, (displayBrightness * 100) / 255);
+    } else if (line == "-" || line == "_") {
+      if (displayBrightness >= 35) displayBrightness -= 20; else displayBrightness = 15;
+      analogWrite(TFT_BL, displayBrightness);
+      Serial.printf("[BADGE] Brightness: %d (%d%%)\n", displayBrightness, (displayBrightness * 100) / 255);
     } else if (line.equalsIgnoreCase("ip")) {
       Serial.printf("[BADGE] IP Address: http://%s/\n", currentIP.c_str());
     }
