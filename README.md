@@ -21,6 +21,7 @@ An open-source embedded graphics ecosystem featuring **four distinct projects** 
 | **☀️ Weather & Clock Station** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 33 FPS | Live Open-Meteo weather API, location badge, temp/humidity/wind, NTP clock, celestial sky arc | [`weather-clock-station/`](weather-clock-station/) |
 | **🌈 Color TFT Weather Station**| ESP32-C3 SuperMini (160MHz) | 1.8" ST7735 Color TFT (SPI) | 30 FPS | Full 16-bit RGB565 color dashboard, Pune weather, NTP clock, auto-shuts OLED OFF | [`tft-weather-station/`](tft-weather-station/) |
 | **🐱 Chibi Cute Face Motion**   | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | **60 FPS** | Sparkly anime eyes, ear twitches, sub-pixel breathing, blinks, blush, floating hearts | [`chibi-face/`](chibi-face/) |
+| **⚡ Sleeping Pikachu Companion**| ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 33 FPS | Laying Pikachu snoozing, deep breathing, tail wags, cheek electric sparks, floating Zzz | [`pikachu-oled/`](pikachu-oled/) |
 
 ---
 
