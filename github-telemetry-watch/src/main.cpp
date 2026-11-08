@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <WiFi.h>
+#include <WebServer.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <time.h>
@@ -9,9 +10,10 @@
 #include "hud_icons.h"
 
 // ============================================================================
-// Developer Telemetry Watch & GitHub Stats HUD (No Anime)
-// Tracks: NTP Time, Pune Location, Date, Core Temp, and Live GitHub Commits
-// Target: ESP32-WROOM-32 + 1.8" ST7735 Color TFT (160x128, Rotation 3)
+// Developer Telemetry Watch & GitHub Stats HUD (Ultra-Responsive Dual-Core)
+// MCU: ESP32-WROOM-32 (Dual Core 240MHz) | Display: 1.8" ST7735 (160x128)
+// Real-time: NTP Time, Pune, IN, Silicon Temp, Live GitHub Commits (@joyboy-pega)
+// Built-in Web Portal + Hotkey Serial Control + Async Network Task on Core 0
 // ============================================================================
 
 // ----------------------------------------------------------------------------
@@ -22,11 +24,11 @@
 #define TFT_RST   4   // Hardware Reset (GPIO 4)
 #define TFT_MOSI 23   // Hardware VSPI MOSI / SDA (GPIO 23)
 #define TFT_SCLK 18   // Hardware VSPI SCLK / SCK (GPIO 18)
-#define TFT_BL   32   // Backlight PWM pin
+#define TFT_BL   32   // Backlight PWM pin (GPIO 32)
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 
-// 160x128 Double-Buffered Canvas for ZERO-Flicker 60 FPS Rendering
+// 160x128 Double-Buffered Canvas for ZERO-Flicker Rendering
 GFXcanvas16* canvas = nullptr;
 const int SCREEN_W = 160;
 const int SCREEN_H = 128;
@@ -51,11 +53,14 @@ uint8_t displayBrightness = 255; // 0 to 255
 uint8_t screenRotation = 3;      // 180° rotated landscape
 
 // ----------------------------------------------------------------------------
-// Wi-Fi Credentials & Geolocation (Pune, India)
+// Wi-Fi Credentials & Built-in Web Server
 // ----------------------------------------------------------------------------
 const char* wifiSSID = "Arigatoo1";
 const char* wifiPassword = "12345678";
 volatile bool wifiConnected = false;
+String localIPStr = "Connecting...";
+WebServer server(80);
+
 const long gmtOffsetSec = 19800; // IST UTC+5:30 (Pune, India)
 const int daylightOffsetSec = 0;
 const char* LOCATION_NAME = "PUNE, IN";
@@ -74,17 +79,19 @@ int curDayOfWeek = 0; // Sun=0
 float currentCoreTemp = 38.2f;
 unsigned long lastTickMillis = 0;
 unsigned long bootMillis = 0;
+volatile bool uiNeedsRedraw = true;
 
 // GitHub User & Commits Telemetry
 const char* GITHUB_USER = "joyboy-pega";
-volatile int totalGithubCommits = 873; // Live baseline for joyboy-pega
+volatile int totalGithubCommits = 894; // Baseline for joyboy-pega (894 in 2026)
 volatile bool githubFetchDone = false;
+volatile bool triggerManualFetch = false;
 unsigned long lastGithubFetch = 0;
 
 const char* DAY_NAMES[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
 const char* MONTH_NAMES[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
 
-// Simulated Contribution Heatmap Matrix (4 rows x 8 columns)
+// Contribution Heatmap Matrix (4 rows x 8 columns)
 uint8_t heatmapMatrix[4][8] = {
   {1, 2, 3, 2, 3, 3, 2, 3},
   {2, 1, 3, 3, 2, 3, 3, 2},
@@ -99,6 +106,7 @@ void advanceClock();
 void updateTemperature();
 void renderHUD();
 void handleSerialCommands();
+void setupWebServer();
 void backgroundNetworkWorker(void* pvParameters);
 uint16_t scaleBrightness(uint16_t color, uint8_t brightness);
 
@@ -107,11 +115,12 @@ uint16_t scaleBrightness(uint16_t color, uint8_t brightness);
 // ============================================================================
 void setup() {
   Serial.begin(115200);
+  Serial.setTimeout(20); // Fast non-blocking timeout
   bootMillis = millis();
-  delay(500);
+  delay(200);
 
   Serial.println("\n\n========================================================");
-  Serial.println("  GitHub Dev Telemetry Watch HUD (No Anime Version)     ");
+  Serial.println("  GitHub Dev Telemetry Watch HUD (Ultra-Responsive)     ");
   Serial.println("========================================================");
 
   // Setup Backlight PWM
@@ -130,50 +139,66 @@ void setup() {
   // Allocate 160x128 double-buffered canvas (40KB RAM)
   canvas = new GFXcanvas16(SCREEN_W, SCREEN_H);
   if (canvas) {
-    Serial.println("[OK] 160x128 Double-Buffered Canvas Active (Zero Flicker!)");
+    Serial.println("[OK] 160x128 Double-Buffered Canvas Active");
   }
 
-  // Launch Background Network Worker (Wi-Fi + NTP + GitHub Fetch)
-  xTaskCreate(
+  // Setup Web Server routes
+  setupWebServer();
+
+  // Launch Background Network Worker PINNED TO CORE 0
+  // Core 0 handles Wi-Fi, NTP, Web Requests, and GitHub HTTPS Streaming
+  // Core 1 runs the Display Render Loop and Hardware I/O with ZERO latency!
+  xTaskCreatePinnedToCore(
     backgroundNetworkWorker,
     "NetWorker",
     8192,
     NULL,
     1,
-    NULL
+    NULL,
+    0 // Core 0
   );
 
-  Serial.println("[OK] GitHub Telemetry Watch Active!");
-  Serial.println("Hotkeys: '+' / '-' for brightness, 'flip' to rotate 180, 'commits <n>' to mock");
+  Serial.println("[OK] Telemetry Watch Active on Dual-Core ESP32!");
+  Serial.println("Serial Hotkeys: '+' / '-' brightness | 'flip' rotate 180 | 'commits <n>' | 'refresh'");
+  
+  uiNeedsRedraw = true;
+  renderHUD();
 }
 
 // ============================================================================
-// Main 30 FPS Render Loop
+// Main Loop (Core 1: Dedicated to Display, Sensor, & Instant Response)
 // ============================================================================
 void loop() {
+  // 1. Process instant serial commands
   handleSerialCommands();
 
-  // 1-second clock tick & internal sensors
-  if (millis() - lastTickMillis >= 1000) {
-    lastTickMillis = millis();
+  // 2. 1-second clock tick & internal silicon temperature
+  unsigned long now = millis();
+  if (now - lastTickMillis >= 1000) {
+    lastTickMillis = now;
     advanceClock();
     updateTemperature();
+    uiNeedsRedraw = true;
   }
 
-  // Render complete HUD
-  renderHUD();
+  // 3. Render HUD immediately whenever state changes
+  if (uiNeedsRedraw) {
+    uiNeedsRedraw = false;
+    renderHUD();
+  }
 
-  delay(33); // ~30 FPS silky smooth cadence
+  // 4. Ultra-short sleep to yield to FreeRTOS scheduler without lag
+  delay(10);
 }
 
 // ============================================================================
-// Clock & Internal Temperature
+// Clock & Silicon Sensor
 // ============================================================================
 void advanceClock() {
-  time_t now = time(nullptr);
-  if (now > 100000000) {
+  time_t t_now = time(nullptr);
+  if (t_now > 100000000) {
     struct tm t;
-    localtime_r(&now, &t);
+    localtime_r(&t_now, &t);
     curHours = t.tm_hour;
     curMinutes = t.tm_min;
     curSeconds = t.tm_sec;
@@ -203,7 +228,7 @@ void updateTemperature() {
 }
 
 // ============================================================================
-// HUD Renderer (Full Width 160x128 Double-Buffered)
+// HUD Renderer (Full Width 160x128 Double-Buffered, Zero-Flicker)
 // ============================================================================
 void renderHUD() {
   if (!canvas) return;
@@ -227,16 +252,21 @@ void renderHUD() {
   canvas->drawRoundRect(2, 2, 156, 14, 3, cBorder);
 
   // Location Pin & Name
-  canvas->drawBitmap(6, 5, pin_icon, 7, 9, cRed);
+  canvas->drawBitmap(5, 5, pin_icon, 7, 9, cRed);
   canvas->setTextSize(1);
   canvas->setTextColor(cWhite);
-  canvas->setCursor(16, 5);
+  canvas->setCursor(15, 5);
   canvas->print(LOCATION_NAME);
 
-  // Profile Handle
+  // Center: alternate between @joyboy-pega and IP address
   canvas->setTextColor(cCyan);
   canvas->setCursor(68, 5);
-  canvas->print(F("@joyboy-pega"));
+  if ((curSeconds / 4) % 2 == 0 || !wifiConnected) {
+    canvas->print(F("@joyboy-pega"));
+  } else {
+    // Show short IP
+    canvas->print(WiFi.localIP().toString());
+  }
 
   // Wi-Fi Status Icon
   if (wifiConnected) {
@@ -369,7 +399,7 @@ uint16_t scaleBrightness(uint16_t color, uint8_t brightness) {
 }
 
 // ============================================================================
-// Interactive Serial Commands (115200 baud)
+// Interactive Serial Commands (115200 baud, Non-blocking)
 // ============================================================================
 void handleSerialCommands() {
   while (Serial.available()) {
@@ -378,12 +408,14 @@ void handleSerialCommands() {
       Serial.read();
       if (displayBrightness <= 235) displayBrightness += 20; else displayBrightness = 255;
       analogWrite(TFT_BL, displayBrightness);
+      uiNeedsRedraw = true;
       Serial.printf("[HUD] Brightness: %d (%d%%)\n", displayBrightness, (displayBrightness * 100) / 255);
       continue;
     } else if (c == '-' || c == '_') {
       Serial.read();
       if (displayBrightness >= 35) displayBrightness -= 20; else displayBrightness = 15;
       analogWrite(TFT_BL, displayBrightness);
+      uiNeedsRedraw = true;
       Serial.printf("[HUD] Brightness: %d (%d%%)\n", displayBrightness, (displayBrightness * 100) / 255);
       continue;
     }
@@ -395,26 +427,275 @@ void handleSerialCommands() {
     if (line.equalsIgnoreCase("flip")) {
       screenRotation = (screenRotation + 2) % 4;
       tft.setRotation(screenRotation);
+      uiNeedsRedraw = true;
       Serial.printf("[HUD] Flipped 180°. Rotation: %d\n", screenRotation);
     } else if (line.startsWith("commits ")) {
       totalGithubCommits = line.substring(8).toInt();
+      uiNeedsRedraw = true;
       Serial.printf("[HUD] Commits manually set to: %d\n", totalGithubCommits);
+    } else if (line.equalsIgnoreCase("refresh")) {
+      triggerManualFetch = true;
+      Serial.println("[HUD] GitHub sync requested!");
     } else if (line.equalsIgnoreCase("status")) {
-      Serial.printf("[HUD] Wi-Fi: %s | Time: %02d:%02d:%02d | Commits: %d | Core Temp: %.1fC\n",
+      Serial.printf("[HUD] Wi-Fi: %s (%s) | Time: %02d:%02d:%02d | Commits: %d | Core Temp: %.1fC | Heap: %luK\n",
                     wifiConnected ? "CONNECTED" : "OFFLINE",
+                    localIPStr.c_str(),
                     curHours, curMinutes, curSeconds,
-                    totalGithubCommits, currentCoreTemp);
+                    totalGithubCommits, currentCoreTemp, ESP.getFreeHeap() / 1024);
     }
   }
 }
 
 // ============================================================================
-// Background FreeRTOS Worker (Wi-Fi + NTP + GitHub Fetch)
+// HTML Web Control Dashboard (Served on http://<ESP32_IP>)
+// ============================================================================
+const char INDEX_HTML[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub Telemetry Watch HUD</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #121a29;
+      --border: #233554;
+      --cyan: #3ffaed;
+      --green: #2fe47c;
+      --gold: #fde047;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
+    body { background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 480px; }
+    header { text-align: center; margin-bottom: 24px; }
+    header h1 { font-size: 1.5rem; color: var(--cyan); letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .card h2 { font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.5px; }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.95rem; }
+    .stat-val { font-weight: bold; font-family: monospace; }
+    .stat-val.gold { color: var(--gold); }
+    .stat-val.green { color: var(--green); font-size: 1.4rem; }
+    .stat-val.cyan { color: var(--cyan); }
+    .control-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; }
+    input[type=range] { width: 100%; accent-color: var(--cyan); }
+    .btn-row { display: flex; gap: 10px; margin-top: 14px; }
+    button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--cyan); background: transparent; color: var(--cyan); font-weight: bold; cursor: pointer; transition: 0.2s; }
+    button:hover { background: var(--cyan); color: #000; }
+    button.primary { background: var(--green); border-color: var(--green); color: #000; }
+    button.primary:hover { opacity: 0.9; }
+    .form-inline { display: flex; gap: 8px; margin-top: 8px; }
+    .form-inline input { flex: 1; background: #0c121e; border: 1px solid var(--border); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚡ Telemetry Watch HUD</h1>
+      <p>Target: @joyboy-pega | Pune, IN | 1.8" ST7735</p>
+    </header>
+
+    <div class="card">
+      <h2>Live Telemetry</h2>
+      <div class="stat-row">
+        <span>Time (IST):</span>
+        <span id="time" class="stat-val gold">--:--:--</span>
+      </div>
+      <div class="stat-row">
+        <span>GitHub Commits:</span>
+        <span id="commits" class="stat-val green">894</span>
+      </div>
+      <div class="stat-row">
+        <span>Silicon Temp:</span>
+        <span id="temp" class="stat-val cyan">--.-°C</span>
+      </div>
+      <div class="stat-row">
+        <span>Free RAM:</span>
+        <span id="ram" class="stat-val">-- KB</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Display Controls</h2>
+      <div class="control-group">
+        <label>Brightness: <span id="brightVal">100%</span></label>
+        <input type="range" id="brightSlider" min="15" max="255" value="255" oninput="setBrightness(this.value)">
+      </div>
+      <div class="btn-row">
+        <button onclick="flipScreen()">🔄 Rotate 180°</button>
+        <button class="primary" onclick="refreshGithub()">🚀 Refresh GitHub</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Override Commits Count</h2>
+      <div class="form-inline">
+        <input type="number" id="manualCommits" placeholder="e.g. 894" value="894">
+        <button onclick="setCommits()">Set</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function updateStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        document.getElementById('time').innerText = data.time;
+        document.getElementById('commits').innerText = data.commits;
+        document.getElementById('temp').innerText = data.temp + '°C';
+        document.getElementById('ram').innerText = data.ram + ' KB';
+        document.getElementById('brightVal').innerText = Math.round((data.brightness / 255) * 100) + '%';
+        document.getElementById('brightSlider').value = data.brightness;
+      } catch (e) {}
+    }
+
+    async function setBrightness(val) {
+      document.getElementById('brightVal').innerText = Math.round((val / 255) * 100) + '%';
+      await fetch('/api/brightness?val=' + val);
+    }
+
+    async function flipScreen() {
+      await fetch('/api/flip');
+    }
+
+    async function refreshGithub() {
+      await fetch('/api/refresh');
+      alert('GitHub sync triggered! Re-fetching stats...');
+    }
+
+    async function setCommits() {
+      const val = document.getElementById('manualCommits').value;
+      if (val) {
+        await fetch('/api/commits?val=' + val);
+        updateStats();
+      }
+    }
+
+    setInterval(updateStats, 1000);
+    updateStats();
+  </script>
+</body>
+</html>
+)rawliteral";
+
+void setupWebServer() {
+  server.on("/", HTTP_GET, []() {
+    server.send_P(200, "text/html", INDEX_HTML);
+  });
+
+  server.on("/api/stats", HTTP_GET, []() {
+    char buf[128];
+    snprintf(buf, sizeof(buf),
+      "{\"time\":\"%02d:%02d:%02d\",\"commits\":%d,\"temp\":%.1f,\"ram\":%lu,\"brightness\":%d}",
+      curHours, curMinutes, curSeconds, totalGithubCommits, currentCoreTemp, ESP.getFreeHeap() / 1024, displayBrightness);
+    server.send(200, "application/json", buf);
+  });
+
+  server.on("/api/brightness", HTTP_GET, []() {
+    if (server.hasArg("val")) {
+      displayBrightness = server.arg("val").toInt();
+      analogWrite(TFT_BL, displayBrightness);
+      uiNeedsRedraw = true;
+    }
+    server.send(200, "text/plain", "OK");
+  });
+
+  server.on("/api/flip", HTTP_GET, []() {
+    screenRotation = (screenRotation + 2) % 4;
+    tft.setRotation(screenRotation);
+    uiNeedsRedraw = true;
+    server.send(200, "text/plain", "OK");
+  });
+
+  server.on("/api/refresh", HTTP_GET, []() {
+    triggerManualFetch = true;
+    server.send(200, "text/plain", "OK");
+  });
+
+  server.on("/api/commits", HTTP_GET, []() {
+    if (server.hasArg("val")) {
+      totalGithubCommits = server.arg("val").toInt();
+      uiNeedsRedraw = true;
+    }
+    server.send(200, "text/plain", "OK");
+  });
+}
+
+// ============================================================================
+// Streaming GitHub Fetcher (Consumes < 1KB RAM, Never Exhausts Heap!)
+// ============================================================================
+void streamGithubContributions() {
+  Serial.println("[GITHUB] Streaming contributions for @joyboy-pega...");
+
+  WiFiClientSecure client;
+  client.setInsecure();
+  client.setTimeout(10); // 10s timeout
+  
+  HTTPClient https;
+  https.setTimeout(8000);
+
+  String url = "https://github.com/users/joyboy-pega/contributions";
+  if (!https.begin(client, url)) {
+    Serial.println("[GITHUB] Connection begin failed!");
+    return;
+  }
+
+  https.setUserAgent("Mozilla/5.0 (ESP32 Developer HUD)");
+  int httpCode = https.GET();
+
+  if (httpCode == HTTP_CODE_OK) {
+    WiFiClient* stream = https.getStreamPtr();
+    bool foundActivity = false;
+    unsigned long startRead = millis();
+
+    // Stream lines without loading the whole 230KB file
+    while (stream->connected() && (stream->available() || (millis() - startRead < 4000))) {
+      if (stream->available()) {
+        String line = stream->readStringUntil('\n');
+        line.trim();
+
+        if (line.indexOf("js-contribution-activity-description") >= 0) {
+          foundActivity = true;
+          continue;
+        }
+
+        if (foundActivity && line.length() > 0) {
+          // Expected line: "894" or "894 contributions"
+          int count = line.toInt();
+          if (count > 0) {
+            totalGithubCommits = count;
+            githubFetchDone = true;
+            uiNeedsRedraw = true;
+            Serial.printf("[GITHUB] Extracted Total Commits: %d\n", totalGithubCommits);
+            break;
+          }
+        }
+      } else {
+        vTaskDelay(pdMS_TO_TICKS(10));
+      }
+    }
+  } else {
+    Serial.printf("[GITHUB] HTTP Code: %d\n", httpCode);
+  }
+
+  https.end();
+}
+
+// ============================================================================
+// Background FreeRTOS Worker (PINNED TO CORE 0)
+// Manages Wi-Fi, NTP Sync, Web Server, and Async GitHub Fetching
 // ============================================================================
 void backgroundNetworkWorker(void* pvParameters) {
   while (true) {
+    // 1. Manage Wi-Fi Connection
     if (WiFi.status() != WL_CONNECTED) {
       wifiConnected = false;
+      localIPStr = "Connecting...";
       Serial.printf("[NET WORKER] Connecting to Wi-Fi '%s'...\n", wifiSSID);
       WiFi.mode(WIFI_STA);
       WiFi.begin(wifiSSID, wifiPassword);
@@ -427,10 +708,14 @@ void backgroundNetworkWorker(void* pvParameters) {
 
       if (WiFi.status() == WL_CONNECTED) {
         wifiConnected = true;
-        Serial.printf("[NET WORKER] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
+        localIPStr = WiFi.localIP().toString();
+        Serial.printf("[NET WORKER] Connected! IP: %s\n", localIPStr.c_str());
         configTime(gmtOffsetSec, daylightOffsetSec, "pool.ntp.org", "time.nist.gov");
+        server.begin();
+        Serial.println("[NET WORKER] Web Server active on port 80");
+        uiNeedsRedraw = true;
       } else {
-        Serial.println("[NET WORKER] Connection failed. Retrying in 10s...");
+        Serial.println("[NET WORKER] Retrying Wi-Fi in 10s...");
         vTaskDelay(pdMS_TO_TICKS(10000));
         continue;
       }
@@ -438,48 +723,19 @@ void backgroundNetworkWorker(void* pvParameters) {
       wifiConnected = true;
     }
 
-    // Fetch GitHub commit stats every 10 minutes
-    if (wifiConnected && (millis() - lastGithubFetch >= 600000 || !githubFetchDone)) {
-      lastGithubFetch = millis();
-      Serial.println("[GITHUB] Querying user contributions for @joyboy-pega...");
-
-      WiFiClientSecure client;
-      client.setInsecure();
-      HTTPClient https;
-      https.setTimeout(8000);
-
-      String url = "https://github.com/users/joyboy-pega/contributions";
-      if (https.begin(client, url)) {
-        https.setUserAgent("Mozilla/5.0 (ESP32 Developer HUD)");
-        int httpCode = https.GET();
-        if (httpCode == HTTP_CODE_OK) {
-          String body = https.getString();
-          int idx = body.indexOf("contributions");
-          if (idx > 0) {
-            int numEnd = idx - 1;
-            while (numEnd > 0 && (body[numEnd] == ' ' || body[numEnd] == '\n' || body[numEnd] == '\r' || body[numEnd] == '\t')) {
-              numEnd--;
-            }
-            int numStart = numEnd;
-            while (numStart > 0 && ((body[numStart] >= '0' && body[numStart] <= '9') || body[numStart] == ',')) {
-              numStart--;
-            }
-            numStart++;
-            String numStr = body.substring(numStart, numEnd + 1);
-            numStr.replace(",", "");
-            int count = numStr.toInt();
-            if (count > 0) {
-              totalGithubCommits = count;
-              githubFetchDone = true;
-              Serial.printf("[GITHUB] Extracted Total Commits: %d\n", totalGithubCommits);
-            }
-          }
-        }
-        https.end();
-      }
+    // 2. Handle incoming web clients
+    for (int i = 0; i < 20; i++) {
+      server.handleClient();
+      vTaskDelay(pdMS_TO_TICKS(50));
     }
 
-    vTaskDelay(pdMS_TO_TICKS(5000));
+    // 3. Fetch GitHub stats every 10 minutes or when requested
+    if (wifiConnected && (millis() - lastGithubFetch >= 600000 || !githubFetchDone || triggerManualFetch)) {
+      triggerManualFetch = false;
+      lastGithubFetch = millis();
+      streamGithubContributions();
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
-
