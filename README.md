@@ -24,6 +24,7 @@ An open-source embedded graphics ecosystem featuring **four distinct projects** 
 | **⚡ Sleeping Pikachu Companion**| ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 33 FPS | Laying Pikachu snoozing, deep breathing, tail wags, cheek electric sparks, floating Zzz | [`pikachu-oled/`](pikachu-oled/) |
 | **📟 Hangry Mood Scroll Badge** | ESP32-WROOM-32 (240MHz) | 1.8" ST7735 Color TFT (SPI) | **50 FPS** | Double-buffered marquee ticker, iconic pastel pink `:( hangry`, customizable themes & live text | [`tft-scroll-badge/`](tft-scroll-badge/) |
 | **🌸 Anime Telemetry Watch HUD**| ESP32-WROOM-32 (240MHz) | 1.8" ST7735 Color TFT (SPI) | 30 FPS | 16-bit pixel art anime companion (blinking & breathing), NTP clock, Pune location, GitHub commits & silicon temp | [`anime-telemetry-watch/`](anime-telemetry-watch/) |
+| **🐙 Dev GitHub Telemetry Watch**| ESP32-WROOM-32 (240MHz) | 1.8" ST7735 Color TFT (SPI) | 30 FPS | Full-width developer HUD: live NTP clock, Pune location, core temp, @joyboy-pega contributions & heatmap | [`github-telemetry-watch/`](github-telemetry-watch/) |
 
 ---
 
