@@ -95,9 +95,9 @@ void setup() {
   SPI.begin(TFT_SCLK, -1, TFT_MOSI, TFT_CS);
   SPI.setFrequency(27000000); // 27 MHz high-speed SPI
 
-  // Initialize ST7735 in 1.8" Black Tab Landscape Mode
+  // Initialize ST7735 in 1.8" Black Tab Landscape Mode (Rotated 180°: rotation = 3)
   tft.initR(INITR_BLACKTAB);
-  tft.setRotation(1); // Landscape: 160 pixels wide x 128 pixels tall
+  tft.setRotation(3); // 180° rotated landscape (160x128)
   tft.fillScreen(colorBg);
 
   // Allocate 160x128 16-bit double-buffered canvas (40 KB RAM)
@@ -252,17 +252,27 @@ void handleSerialCommands() {
     } else if (line.equalsIgnoreCase("pink")) {
       colorBg = themes[0].bg; colorText = themes[0].text;
       Serial.println("[BADGE] Color set to Bubblegum Pink!");
+    } else if (line.equalsIgnoreCase("flip")) {
+      uint8_t rot = (tft.getRotation() + 2) % 4;
+      tft.setRotation(rot);
+      Serial.printf("[BADGE] Flipped 180°. Current rotation: %d\n", rot);
+    } else if (line.startsWith("rotate ")) {
+      int r = line.substring(7).toInt();
+      if (r >= 0 && r <= 3) {
+        tft.setRotation(r);
+        Serial.printf("[BADGE] Rotation set to: %d\n", r);
+      }
     } else if (line.equalsIgnoreCase("tab black")) {
       tft.initR(INITR_BLACKTAB);
-      tft.setRotation(1);
+      tft.setRotation(3);
       Serial.println("[BADGE] Switched to Black Tab");
     } else if (line.equalsIgnoreCase("tab red")) {
       tft.initR(INITR_REDTAB);
-      tft.setRotation(1);
+      tft.setRotation(3);
       Serial.println("[BADGE] Switched to Red Tab");
     } else if (line.equalsIgnoreCase("tab green")) {
       tft.initR(INITR_GREENTAB);
-      tft.setRotation(1);
+      tft.setRotation(3);
       Serial.println("[BADGE] Switched to Green Tab");
     }
   }
