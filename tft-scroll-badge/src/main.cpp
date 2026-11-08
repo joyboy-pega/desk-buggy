@@ -53,9 +53,9 @@ int currentThemeIdx = 0;
 // Marquee Message & Animation Settings
 // ----------------------------------------------------------------------------
 String currentMessage = ":( hangry";
-int textSize = 3;             // Size 3: 24px high glyphs, perfectly proportioned
+int textSize = 5;             // Size 5: 40px tall bold & chunky pixel glyphs!
 float scrollX = (float)SCREEN_W;
-float scrollSpeed = 2.0f;     // Pixels per frame
+float scrollSpeed = 2.5f;     // Pixels per frame
 bool isPaused = false;
 bool autoCycleMessages = true;
 int messageIndex = 0;
@@ -237,7 +237,7 @@ void handleSerialCommands() {
       }
     } else if (line.startsWith("size ")) {
       int sz = line.substring(5).toInt();
-      if (sz >= 1 && sz <= 5) {
+      if (sz >= 1 && sz <= 8) {
         textSize = sz;
         Serial.printf("[BADGE] Text size set to: %d\n", textSize);
       }
