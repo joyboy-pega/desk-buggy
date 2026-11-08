@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hangry Mood Badge Studio — ESP32 1.8" TFT</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @keyframes marquee {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    .pixel-font {
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 900;
+      letter-spacing: 2px;
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-8">
+  <div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Header & Status Bar -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📟</span>
+          <h1 class="text-xl md:text-2xl font-bold tracking-tight text-[var(--foreground)]">Hangry Mood Badge Studio</h1>
+        </div>
+        <p class="text-[var(--muted-foreground)] text-sm mt-1">Live Customizer for ESP32 + 1.8" ST7735 Color TFT Display</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Web Serial Connect Button -->
+        <button id="btnConnectSerial" class="px-4 py-2.5 rounded-xl font-medium text-sm bg-gradient-to-r from-pink-500 to-rose-500 text-white hover:opacity-95 shadow-sm transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span id="serialStatusText">Connect USB</span>
+        </button>
+        <!-- Wi-Fi IP Mode -->
+        <button id="btnWifiMode" class="px-3.5 py-2.5 rounded-xl font-medium text-sm border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] hover:bg-[var(--accent)] transition flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.343 9.343c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+          <span id="wifiStatusText">Wi-Fi Sync</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Workspace: Simulator & Controls -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- Left Column: Live Screen Simulator (1.8" TFT 160x128 Aspect) -->
+      <div class="lg:col-span-6 space-y-4">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs uppercase tracking-wider font-semibold text-[var(--muted-foreground)]">Live Screen Simulator</span>
+            <div class="flex items-center gap-2">
+              <span id="badgeRotationTag" class="text-xs px-2 py-0.5 rounded-md bg-[var(--accent)] font-mono text-[var(--muted-foreground)]">180° Rotated</span>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-500">● 50 FPS</span>
+            </div>
+          </div>
+
+          <!-- Physical Screen Chassis Outer Frame -->
+          <div class="p-3 bg-zinc-900 rounded-2xl shadow-xl border border-zinc-800 flex justify-center items-center">
+            <!-- 1.8" ST7735 Display Container (160x128 aspect = 5:4) -->
+            <div id="simScreen" class="w-full max-w-[320px] aspect-[5/4] rounded-lg overflow-hidden relative flex items-center shadow-inner transition-colors duration-150 border-4 border-zinc-950" style="background-color: #fc79;">
+              
+              <!-- Subtle Pixel Screen Inner Frame -->
+              <div id="simBorder" class="absolute inset-1.5 border-2 pointer-events-none rounded-sm transition-colors duration-150" style="border-color: #000000;"></div>
+              
+              <!-- Marquee Scrolling Text Layer -->
+              <div id="simTextContainer" class="w-full whitespace-nowrap overflow-hidden">
+                <div id="simMarquee" class="inline-block pixel-font font-black leading-none transition-transform will-change-transform" style="color: #000000; font-size: 38px;">
+                  :( hangry
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions Bar Below Simulator -->
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--border)]">
+            <button id="btnPause" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] hover:bg-[var(--accent)] transition">
+              ⏸️ Pause Scroll
+            </button>
+            <button id="btnFlip" class="px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] hover:bg-[var(--accent)] transition">
+              🔄 Rotate 180°
+            </button>
+            <button id="btnResetHangry" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-pink-500/15 text-pink-500 hover:bg-pink-500/25 transition">
+              💖 Reset ':( hangry'
+            </button>
+          </div>
+        </div>
+
+        <!-- Wi-Fi Connection Panel (Expands when needed) -->
+        <div id="wifiPanel" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-3">
+          <h3 class="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
+            <span>🌐</span> Wi-Fi Direct Control
+          </h3>
+          <p class="text-xs text-[var(--muted-foreground)]">Connect your ESP32 to Wi-Fi to update this badge wirelessly from any phone or computer:</p>
+          <div class="flex gap-2">
+            <input type="text" id="espIpInput" placeholder="http://192.168.1.100" class="flex-1 px-3 py-1.5 rounded-lg text-sm border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-pink-500">
+            <button id="btnSendWifi" class="px-4 py-1.5 rounded-lg text-sm font-medium bg-pink-500 text-white hover:opacity-90 transition">
+              Push Wi-Fi
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Interactive Controls -->
+      <div class="lg:col-span-6 space-y-5">
+
+        <!-- 1. Custom Text Input & Mood Badges -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <label class="block text-sm font-semibold text-[var(--foreground)]">
+            💬 Badge Marquee Text
+          </label>
+          <div class="flex gap-2">
+            <input type="text" id="inputText" value=":( hangry" class="flex-1 px-3.5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-pink-500">
+            <button id="btnApplyText" class="px-4 py-2.5 rounded-xl bg-pink-500 text-white font-medium text-sm hover:opacity-90 transition">
+              Apply
+            </button>
+          </div>
+
+          <!-- Quick Mood Presets -->
+          <div>
+            <span class="text-xs text-[var(--muted-foreground)] block mb-2 font-medium">Quick Mood Presets:</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-[var(--accent)] hover:border-pink-500 border border-transparent transition font-mono" data-text=":( hangry">:( hangry</button>
+              <button class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-[var(--accent)] hover:border-pink-500 border border-transparent transition font-mono" data-text=">:O need coffee">>:O need coffee</button>
+              <button class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-[var(--accent)] hover:border-pink-500 border border-transparent transition font-mono" data-text=":3 feed me">:3 feed me</button>
+              <button class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-[var(--accent)] hover:border-pink-500 border border-transparent transition font-mono" data-text="x_x low battery">x_x low battery</button>
+              <button class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-[var(--accent)] hover:border-pink-500 border border-transparent transition font-mono" data-text="(•_•) do not disturb">(•_•) do not disturb</button>
+              <button class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-[var(--accent)] hover:border-pink-500 border border-transparent transition font-mono" data-text="(>_<) sleepy">(>_<) sleepy</button>
+              <button class="preset-btn px-2.5 py-1 rounded-lg text-xs bg-[var(--accent)] hover:border-pink-500 border border-transparent transition font-mono" data-text="<3 loading love 99%"><3 loading love 99%</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Color Palettes & Custom Pickers -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <label class="block text-sm font-semibold text-[var(--foreground)]">
+            🎨 Color Palette & Themes
+          </label>
+
+          <!-- Color Pickers Row -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)] flex items-center justify-between">
+              <div>
+                <span class="block text-xs text-[var(--muted-foreground)]">Background</span>
+                <span id="hexBgLabel" class="text-xs font-mono font-semibold">#FC79</span>
+              </div>
+              <input type="color" id="pickerBg" value="#ff80df" class="w-9 h-9 rounded-lg cursor-pointer border border-[var(--border)] bg-transparent">
+            </div>
+
+            <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)] flex items-center justify-between">
+              <div>
+                <span class="block text-xs text-[var(--muted-foreground)]">Text & Face</span>
+                <span id="hexTextLabel" class="text-xs font-mono font-semibold">#0000</span>
+              </div>
+              <input type="color" id="pickerText" value="#000000" class="w-9 h-9 rounded-lg cursor-pointer border border-[var(--border)] bg-transparent">
+            </div>
+          </div>
+
+          <!-- Pastel Theme Badges -->
+          <div>
+            <span class="text-xs text-[var(--muted-foreground)] block mb-2 font-medium">Curated Pastel Themes:</span>
+            <div class="grid grid-cols-3 gap-2">
+              <button class="theme-card p-2 rounded-xl border border-[var(--border)] text-left hover:scale-[1.02] transition" data-bg="#ff80df" data-text="#000000">
+                <div class="h-5 rounded-md mb-1.5 flex items-center justify-center font-black text-xs" style="background:#ff80df; color:#000000;">:(</div>
+                <div class="text-[11px] font-semibold text-[var(--foreground)] truncate">Bubblegum Pink</div>
+              </button>
+
+              <button class="theme-card p-2 rounded-xl border border-[var(--border)] text-left hover:scale-[1.02] transition" data-bg="#d5b8ff" data-text="#200050">
+                <div class="h-5 rounded-md mb-1.5 flex items-center justify-center font-black text-xs" style="background:#d5b8ff; color:#200050;">:(</div>
+                <div class="text-[11px] font-semibold text-[var(--foreground)] truncate">Pastel Lilac</div>
+              </button>
+
+              <button class="theme-card p-2 rounded-xl border border-[var(--border)] text-left hover:scale-[1.02] transition" data-bg="#50f0ff" data-text="#000000">
+                <div class="h-5 rounded-md mb-1.5 flex items-center justify-center font-black text-xs" style="background:#50f0ff; color:#000000;">:(</div>
+                <div class="text-[11px] font-semibold text-[var(--foreground)] truncate">Cyber Cyan</div>
+              </button>
+
+              <button class="theme-card p-2 rounded-xl border border-[var(--border)] text-left hover:scale-[1.02] transition" data-bg="#a0f0b0" data-text="#003010">
+                <div class="h-5 rounded-md mb-1.5 flex items-center justify-center font-black text-xs" style="background:#a0f0b0; color:#003010;">:(</div>
+                <div class="text-[11px] font-semibold text-[var(--foreground)] truncate">Matcha Mint</div>
+              </button>
+
+              <button class="theme-card p-2 rounded-xl border border-[var(--border)] text-left hover:scale-[1.02] transition" data-bg="#fff040" data-text="#000000">
+                <div class="h-5 rounded-md mb-1.5 flex items-center justify-center font-black text-xs" style="background:#fff040; color:#000000;">:(</div>
+                <div class="text-[11px] font-semibold text-[var(--foreground)] truncate">Neon Lemon</div>
+              </button>
+
+              <button class="theme-card p-2 rounded-xl border border-[var(--border)] text-left hover:scale-[1.02] transition" data-bg="#101014" data-text="#ff70d0">
+                <div class="h-5 rounded-md mb-1.5 flex items-center justify-center font-black text-xs" style="background:#101014; color:#ff70d0;">:(</div>
+                <div class="text-[11px] font-semibold text-[var(--foreground)] truncate">Dark OLED Glow</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Size & Speed Sliders -->
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-4">
+          <label class="block text-sm font-semibold text-[var(--foreground)]">
+            ⚙️ Display Dynamics & Typography
+          </label>
+
+          <!-- Text Size Slider -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+              <span class="text-[var(--muted-foreground)]">Text Size (Scale)</span>
+              <span id="labelSize" class="font-mono font-semibold">Size 5 (40px)</span>
+            </div>
+            <input type="range" id="sliderSize" min="2" max="7" value="5" step="1" class="w-full accent-pink-500">
+          </div>
+
+          <!-- Scroll Speed Slider -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+              <span class="text-[var(--muted-foreground)]">Marquee Scroll Speed</span>
+              <span id="labelSpeed" class="font-mono font-semibold">2.5 px/frame</span>
+            </div>
+            <input type="range" id="sliderSpeed" min="0.5" max="8.0" value="2.5" step="0.5" class="w-full accent-pink-500">
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Generated Serial Command Box -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs uppercase tracking-wider font-semibold text-[var(--muted-foreground)]">Serial Terminal Command (115200 baud)</span>
+        <button id="btnCopyCommand" class="text-xs text-pink-500 hover:underline font-medium">Copy Command</button>
+      </div>
+      <div class="p-3 bg-[var(--background)] rounded-xl border border-[var(--border)] font-mono text-sm text-pink-400 overflow-x-auto flex items-center justify-between">
+        <code id="codeCommand">msg :( hangry</code>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // State variables
+    let currentMessage = ":( hangry";
+    let bgColor = "#ff80df";
+    let textColor = "#000000";
+    let textSize = 5;
+    let scrollSpeed = 2.5;
+    let isPaused = false;
+    let isRotated180 = true;
+    let serialPort = null;
+    let serialWriter = null;
+
+    // Elements
+    const simScreen = document.getElementById('simScreen');
+    const simBorder = document.getElementById('simBorder');
+    const simMarquee = document.getElementById('simMarquee');
+    const inputText = document.getElementById('inputText');
+    const btnApplyText = document.getElementById('btnApplyText');
+    const pickerBg = document.getElementById('pickerBg');
+    const pickerText = document.getElementById('pickerText');
+    const sliderSize = document.getElementById('sliderSize');
+    const sliderSpeed = document.getElementById('sliderSpeed');
+    const labelSize = document.getElementById('labelSize');
+    const labelSpeed = document.getElementById('labelSpeed');
+    const btnPause = document.getElementById('btnPause');
+    const btnFlip = document.getElementById('btnFlip');
+    const btnResetHangry = document.getElementById('btnResetHangry');
+    const codeCommand = document.getElementById('codeCommand');
+    const btnCopyCommand = document.getElementById('btnCopyCommand');
+    const btnConnectSerial = document.getElementById('btnConnectSerial');
+    const serialStatusText = document.getElementById('serialStatusText');
+    const badgeRotationTag = document.getElementById('badgeRotationTag');
+
+    // Simulator Animation Loop
+    let simX = 320;
+    function updateSimulator() {
+      if (!isPaused) {
+        simX -= (scrollSpeed * 0.8);
+        const textWidth = simMarquee.offsetWidth;
+        if (simX < -textWidth) {
+          simX = simScreen.clientWidth;
+        }
+        simMarquee.style.transform = `translateX(${simX}px)`;
+      }
+      requestAnimationFrame(updateSimulator);
+    }
+    requestAnimationFrame(updateSimulator);
+
+    // Update visuals
+    function applyVisuals() {
+      simScreen.style.backgroundColor = bgColor;
+      simBorder.style.borderColor = textColor;
+      simMarquee.style.color = textColor;
+      simMarquee.textContent = currentMessage;
+
+      // Font size mapping: Size 3 = 24px, Size 5 = 38px, Size 7 = 52px
+      const pixelHeights = { 2: 18, 3: 24, 4: 30, 5: 38, 6: 46, 7: 54 };
+      const pxH = pixelHeights[textSize] || 38;
+      simMarquee.style.fontSize = `${pxH}px`;
+
+      labelSize.textContent = `Size ${textSize} (${pxH}px)`;
+      labelSpeed.textContent = `${scrollSpeed.toFixed(1)} px/frame`;
+
+      // Update command
+      codeCommand.textContent = `msg ${currentMessage}`;
+
+      // Send to hardware if connected via Serial
+      sendSerialCommand(`msg ${currentMessage}\n`);
+    }
+
+    // Color Pickers
+    pickerBg.addEventListener('input', (e) => {
+      bgColor = e.target.value;
+      applyVisuals();
+      const rgb565 = hexToRgb565(bgColor);
+      sendSerialCommand(`bg 0x${rgb565.toString(16).toUpperCase()}\n`);
+    });
+
+    pickerText.addEventListener('input', (e) => {
+      textColor = e.target.value;
+      applyVisuals();
+      const rgb565 = hexToRgb565(textColor);
+      sendSerialCommand(`text 0x${rgb565.toString(16).toUpperCase()}\n`);
+    });
+
+    // Preset Themes
+    document.querySelectorAll('.theme-card').forEach(btn => {
+      btn.addEventListener('click', () => {
+        bgColor = btn.dataset.bg;
+        textColor = btn.dataset.text;
+        pickerBg.value = bgColor;
+        pickerText.value = textColor;
+        applyVisuals();
+        const bg565 = hexToRgb565(bgColor);
+        const text565 = hexToRgb565(textColor);
+        sendSerialCommand(`bg 0x${bg565.toString(16).toUpperCase()}\n`);
+        sendSerialCommand(`text 0x${text565.toString(16).toUpperCase()}\n`);
+      });
+    });
+
+    // Preset Messages
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentMessage = btn.dataset.text;
+        inputText.value = currentMessage;
+        simX = simScreen.clientWidth;
+        applyVisuals();
+      });
+    });
+
+    // Custom Text Submit
+    btnApplyText.addEventListener('click', () => {
+      currentMessage = inputText.value || ":( hangry";
+      simX = simScreen.clientWidth;
+      applyVisuals();
+    });
+    inputText.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        currentMessage = inputText.value || ":( hangry";
+        simX = simScreen.clientWidth;
+        applyVisuals();
+      }
+    });
+
+    // Size & Speed Sliders
+    sliderSize.addEventListener('input', (e) => {
+      textSize = parseInt(e.target.value);
+      applyVisuals();
+      sendSerialCommand(`size ${textSize}\n`);
+    });
+
+    sliderSpeed.addEventListener('input', (e) => {
+      scrollSpeed = parseFloat(e.target.value);
+      applyVisuals();
+      sendSerialCommand(`speed ${scrollSpeed.toFixed(1)}\n`);
+    });
+
+    // Controls
+    btnPause.addEventListener('click', () => {
+      isPaused = !isPaused;
+      btnPause.textContent = isPaused ? "▶️ Resume Scroll" : "⏸️ Pause Scroll";
+      sendSerialCommand(`pause\n`);
+    });
+
+    btnFlip.addEventListener('click', () => {
+      isRotated180 = !isRotated180;
+      badgeRotationTag.textContent = isRotated180 ? "180° Rotated" : "0° Standard";
+      sendSerialCommand(`flip\n`);
+    });
+
+    btnResetHangry.addEventListener('click', () => {
+      currentMessage = ":( hangry";
+      inputText.value = currentMessage;
+      bgColor = "#ff80df";
+      textColor = "#000000";
+      textSize = 5;
+      scrollSpeed = 2.5;
+      pickerBg.value = bgColor;
+      pickerText.value = textColor;
+      sliderSize.value = 5;
+      sliderSpeed.value = 2.5;
+      simX = simScreen.clientWidth;
+      applyVisuals();
+      sendSerialCommand(`hangry\n`);
+      sendSerialCommand(`size 5\n`);
+    });
+
+    btnCopyCommand.addEventListener('click', () => {
+      navigator.clipboard.writeText(codeCommand.textContent);
+      btnCopyCommand.textContent = "Copied!";
+      setTimeout(() => btnCopyCommand.textContent = "Copy Command", 1500);
+    });
+
+    // Helper: Hex Color to RGB565 integer
+    function hexToRgb565(hex) {
+      const c = parseInt(hex.replace('#', ''), 16);
+      const r = (c >> 16) & 0xFF;
+      const g = (c >> 8) & 0xFF;
+      const b = c & 0xFF;
+      return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+    }
+
+    // Web Serial API (Direct USB browser connection)
+    btnConnectSerial.addEventListener('click', async () => {
+      if (!('serial' in navigator)) {
+        alert("Web Serial is supported in Google Chrome, Edge, and Opera! You can also use Serial Monitor or Wi-Fi.");
+        return;
+      }
+      try {
+        serialPort = await navigator.serial.requestPort();
+        await serialPort.open({ baudRate: 115200 });
+        const textEncoder = new TextEncoderStream();
+        textEncoder.readable.pipeTo(serialPort.writable);
+        serialWriter = textEncoder.writable.getWriter();
+        serialStatusText.textContent = "USB Connected!";
+        btnConnectSerial.classList.replace('from-pink-500', 'from-emerald-600');
+        btnConnectSerial.classList.replace('to-rose-500', 'to-teal-600');
+      } catch (err) {
+        console.error("Serial connection error:", err);
+      }
+    });
+
+    async function sendSerialCommand(cmd) {
+      if (serialWriter) {
+        try {
+          await serialWriter.write(cmd);
+        } catch (e) {
+          console.warn("Write error:", e);
+        }
+      }
+    }
+
+    // Wi-Fi Push
+    document.getElementById('btnSendWifi').addEventListener('click', () => {
+      const ip = document.getElementById('espIpInput').value.trim();
+      if (!ip) {
+        alert("Please enter your ESP32's IP address (e.g., http://192.168.1.100)");
+        return;
+      }
+      const bg565 = hexToRgb565(bgColor);
+      const text565 = hexToRgb565(textColor);
+      const url = `${ip}/update?msg=${encodeURIComponent(currentMessage)}&size=${textSize}&speed=${scrollSpeed}&bg=0x${bg565.toString(16)}&text=0x${text565.toString(16)}`;
+      window.open(url, '_blank');
+    });
+
+    // Initial setup
+    applyVisuals();
+  </script>
+</body>
+</html>
