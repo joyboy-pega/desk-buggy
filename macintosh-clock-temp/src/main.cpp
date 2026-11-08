@@ -6,6 +6,10 @@
 #include <Adafruit_SSD1306.h>
 #include "mac_bitmaps.h"
 
+// ============================================================================
+// Telemetry Watch & Clock Station for ESP32-C3 SuperMini + 0.96" OLED (SSD1306)
+// ============================================================================
+
 #define SCREEN_WIDTH  128
 #define SCREEN_HEIGHT 64
 #define OLED_RESET    -1
@@ -15,41 +19,197 @@
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-// Internal Clock Variables
-int curHours = 22;
-int curMinutes = 35;
+// Wi-Fi Credentials & Background Connectivity
+String wifiSSID = "Arigatoo1";
+String wifiPassword = "12345678";
+volatile bool wifiConnected = false;
+const long gmtOffsetSec = 19800; // IST UTC+5:30 (Pune, India)
+const int daylightOffsetSec = 0;
+
+// Internal Clock Variables (Fallback base time)
+int curHours = 13;
+int curMinutes = 15;
 int curSeconds = 0;
 int curYear = 2026;
 int curMonth = 11;
-int curDay = 4;
-int curDayOfWeek = 3; // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+int curDay = 8;
+int curDayOfWeek = 0; // 0=Sun, 1=Mon...
 
 unsigned long lastTickMillis = 0;
-float currentTempC = 37.0f;
-float currentTempF = 98.6f;
+unsigned long bootMillis = 0;
+float currentTempC = 36.5f;
+float currentTempF = 97.7f;
+uint8_t displayContrast = 0x38; // Decreased brightness, clean & comfortable
 
-// Temperature History Buffer for Live Graph
+// Temperature Telemetry Buffer for Live Scrolling Graph
 const int TEMP_HISTORY_SIZE = 64;
 float tempHistory[TEMP_HISTORY_SIZE];
 int historyIndex = 0;
 unsigned long lastGraphSample = 0;
 
+// Walk & Fitness Telemetry
+unsigned long totalSteps = 6420;
+float distanceKm = 4.82f;
+int caloriesKcal = 318;
+int walkPaceMin = 5;
+int walkPaceSec = 14;
+int runnerAnimFrame = 0;
+bool isWalking = true;
+unsigned long lastWalkStepTime = 0;
+
 enum DisplayMode {
-  MODE_SYSTEM_WINDOW,  // Classic "About This Mac" window with time, temp & specs
-  MODE_GIANT_CLOCK,    // Large retro digital clock + thermometer
-  MODE_TEMP_GRAPH      // Scrolling historical temperature line graph + clock
+  MODE_SYSTEM_WINDOW,  // 1. Classic "System Status" Macintosh window (Single All-in-One HUD)
+  MODE_GIANT_CLOCK,    // 2. Large retro digital clock + CPU & RAM telemetry
+  MODE_TEMP_GRAPH,     // 3. Live 64-sample telemetry waveform graph
+  MODE_WALK_TELEMETRY  // 4. Walk & Activity Telemetry HUD (Steps, Distance, Pace)
 };
 
 DisplayMode currentMode = MODE_SYSTEM_WINDOW;
 unsigned long lastModeSwitch = 0;
+bool autoCycleModes = false; // Keep only one UI, do not toggle automatically
 
 const char* DAY_NAMES[] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
 const char* MONTH_NAMES[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
 
+// FreeRTOS Wi-Fi Background Task
+TaskHandle_t wifiTaskHandle = NULL;
+
 // -------------------------------------------------------------
+// Forward Declarations
+// -------------------------------------------------------------
+void advanceClockOneSecond();
+void updateTemperature();
+void updateWalkTelemetry();
+void renderSystemWindow();
+void renderGiantClock();
+void renderTempGraph();
+void renderWalkTelemetry();
+void handleSerialCommands();
+void wifiBackgroundWorker(void* pvParameters);
+
+// ============================================================================
+// Setup
+// ============================================================================
+void setup() {
+  Serial.begin(115200);
+  bootMillis = millis();
+
+  Serial.println("\n\n========================================================");
+  Serial.println("  ESP32-C3 SuperMini Telemetry Watch & Clock HUD        ");
+  Serial.println("========================================================");
+
+  // Initialize temperature history buffer
+  for (int i = 0; i < TEMP_HISTORY_SIZE; i++) {
+    tempHistory[i] = 36.5f;
+  }
+
+  // 1. Initialize High-Speed Standard 400kHz I2C for 0.96" OLED
+  Wire.begin(I2C_SDA, I2C_SCL);
+  Wire.setClock(400000); // 400 kHz rock-solid standard clock
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println("[WARN] Retrying I2C on alternate pins...");
+    Wire.begin(9, 8);
+    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  }
+
+  // 2. Explicitly power ON OLED panel with comfortable contrast
+  display.ssd1306_command(SSD1306_DISPLAYON);
+  display.dim(false);
+  display.ssd1306_command(SSD1306_SETCONTRAST);
+  display.ssd1306_command(displayContrast); // Comfortable, reduced brightness
+
+  display.clearDisplay();
+  display.setTextColor(SSD1306_WHITE);
+
+  // Splash Screen
+  display.drawBitmap(12, 14, apple_icon, 10, 12, SSD1306_WHITE);
+  display.setTextSize(1);
+  display.setCursor(30, 16);
+  display.print(F("TELEMETRY HUD"));
+  display.setCursor(30, 28);
+  display.print(F("WATCH & CLOCK"));
+  display.setCursor(30, 42);
+  display.print(F("STARTING UP..."));
+  display.display();
+  delay(1000);
+
+  lastTickMillis = millis();
+  lastModeSwitch = millis();
+  lastGraphSample = millis();
+
+  // 3. Spawn background FreeRTOS Wi-Fi task (keeps UI rendering silky smooth)
+  xTaskCreate(
+    wifiBackgroundWorker,
+    "WiFiWorker",
+    4096,
+    NULL,
+    1,
+    &wifiTaskHandle
+  );
+
+  Serial.println("[OK] Telemetry Watch & Clock Engine Running!");
+  Serial.println("Hotkeys in Serial Monitor (115200 baud):");
+  Serial.println("  ' ' or 'm' -> Switch screen mode (1: System / 2: Giant / 3: Graph / 4: Walk)");
+  Serial.println("  'w'        -> Simulate walking steps");
+  Serial.println("  'a'        -> Toggle auto-cycling screens");
+  Serial.println("  'temp'     -> Print live hardware telemetry");
+}
+
+// ============================================================================
+// Main UI Loop (Silky Smooth 30 FPS)
+// ============================================================================
+void loop() {
+  handleSerialCommands();
+
+  // 1. One second clock & telemetry update
+  if (millis() - lastTickMillis >= 1000) {
+    lastTickMillis = millis();
+    advanceClockOneSecond();
+    updateTemperature();
+    updateWalkTelemetry();
+  }
+
+  // 2. Auto-cycle through the 4 viewing modes every 8 seconds if enabled
+  if (autoCycleModes && millis() - lastModeSwitch >= 8000) {
+    lastModeSwitch = millis();
+    currentMode = (DisplayMode)((currentMode + 1) % 4);
+  }
+
+  // 3. Render active telemetry screen
+  display.clearDisplay();
+
+  switch (currentMode) {
+    case MODE_SYSTEM_WINDOW: renderSystemWindow(); break;
+    case MODE_GIANT_CLOCK:   renderGiantClock();   break;
+    case MODE_TEMP_GRAPH:    renderTempGraph();    break;
+    case MODE_WALK_TELEMETRY: renderWalkTelemetry(); break;
+  }
+
+  display.display();
+  delay(33); // ~30 FPS
+}
+
+// ============================================================================
 // Clock & Timekeeping Logic
-// -------------------------------------------------------------
+// ============================================================================
 void advanceClockOneSecond() {
+  time_t now = time(nullptr);
+  if (now > 100000000) {
+    // Synced with NTP
+    struct tm t;
+    localtime_r(&now, &t);
+    curHours = t.tm_hour;
+    curMinutes = t.tm_min;
+    curSeconds = t.tm_sec;
+    curDay = t.tm_mday;
+    curMonth = t.tm_mon + 1;
+    curYear = t.tm_year + 1900;
+    curDayOfWeek = t.tm_wday;
+    return;
+  }
+
+  // Standalone RTC
   curSeconds++;
   if (curSeconds >= 60) {
     curSeconds = 0;
@@ -66,282 +226,335 @@ void advanceClockOneSecond() {
   }
 }
 
-// -------------------------------------------------------------
-// Temperature Measurement (Internal ESP32-C3 Core Sensor)
-// -------------------------------------------------------------
+// ============================================================================
+// Hardware Core Temperature Telemetry
+// ============================================================================
 void updateTemperature() {
-  // Read on-chip silicon core temperature sensor
   float raw = temperatureRead();
   if (raw > 0.0f && raw < 120.0f) {
-    // Smooth reading with exponential filter
     currentTempC = currentTempC * 0.85f + raw * 0.15f;
   }
   currentTempF = currentTempC * 1.8f + 32.0f;
 
-  // Record into graph history every 2 seconds
-  if (millis() - lastGraphSample >= 2000) {
+  if (millis() - lastGraphSample >= 1500) {
     lastGraphSample = millis();
     tempHistory[historyIndex] = currentTempC;
     historyIndex = (historyIndex + 1) % TEMP_HISTORY_SIZE;
   }
 }
 
-// -------------------------------------------------------------
-// Screen Mode 1: Classic Retro Macintosh System Status Window
-// -------------------------------------------------------------
-void renderSystemWindow() {
-  display.clearDisplay();
+// ============================================================================
+// Walk & Fitness Telemetry Logic
+// ============================================================================
+void updateWalkTelemetry() {
+  if (isWalking) {
+    totalSteps += (esp_random() % 3) + 1; // 1-3 steps per second cadence
+    distanceKm = totalSteps * 0.00075f;
+    caloriesKcal = (int)(totalSteps * 0.045f);
+    runnerAnimFrame = (runnerAnimFrame + 1) % 2;
+  }
+}
 
+// ============================================================================
+// Screen Mode 1: Classic Retro Macintosh System Status Window (All-in-One HUD)
+// ============================================================================
+void renderSystemWindow() {
   // Top Menu Bar
   display.fillRect(0, 0, 128, 10, SSD1306_WHITE);
   display.drawBitmap(3, 0, apple_icon, 10, 12, SSD1306_BLACK);
   display.setTextSize(1);
   display.setTextColor(SSD1306_BLACK);
   display.setCursor(16, 1);
-  display.print("System Status");
+  display.print(F("Pune Telemetry"));
 
-  // Retro Window Container (Shadowed Bezel)
-  display.drawRect(0, 12, 128, 52, SSD1306_WHITE);
-  display.drawRect(1, 13, 126, 50, SSD1306_WHITE);
+  // Wi-Fi Indicator in menu bar
+  if (wifiConnected) {
+    display.drawBitmap(116, 1, wifi_icon, 8, 8, SSD1306_BLACK);
+  } else {
+    display.setCursor(76, 1);
+    display.print(F("WIFI WAIT"));
+  }
 
-  // Digital Clock (Middle Big Box)
-  display.setTextSize(2);
+  // Macintosh Window Box
+  display.drawRect(2, 12, 124, 50, SSD1306_WHITE);
+  display.drawFastHLine(3, 22, 122, SSD1306_WHITE);
+
+  // Window Title Tab
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(10, 17);
-  display.printf("%02d:%02d:%02d", curHours, curMinutes, curSeconds);
+  display.setCursor(6, 14);
+  display.print(F("CLOCK & VITALS"));
+
+  // Digital Clock
+  display.setTextSize(2);
+  display.setCursor(8, 25);
+  char timeBuf[12];
+  snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d:%02d", curHours, curMinutes, curSeconds);
+  display.print(timeBuf);
 
   // Date Ribbon
   display.setTextSize(1);
-  display.setCursor(12, 35);
-  display.printf("%s, %s %02d, %d", DAY_NAMES[curDayOfWeek], MONTH_NAMES[curMonth - 1], curDay, curYear);
+  display.setCursor(8, 41);
+  char dateBuf[20];
+  snprintf(dateBuf, sizeof(dateBuf), "%s, %s %02d",
+           DAY_NAMES[curDayOfWeek], MONTH_NAMES[(curMonth - 1) % 12], curDay);
+  display.print(dateBuf);
 
-  // Thermometer & Temperature Bar
-  display.drawBitmap(8, 46, thermometer_icon, 9, 16, SSD1306_WHITE);
-  display.setCursor(22, 49);
-  display.printf("%.1f C / %.1f F", currentTempC, currentTempF);
+  // Temperature & Thermometer Icon
+  display.drawBitmap(6, 49, thermometer_icon, 9, 16, SSD1306_WHITE);
+  display.setCursor(17, 52);
+  display.printf("%.1fC", currentTempC);
 
-  display.display();
+  // Activity Walk / Steps Icon & Counter
+  const unsigned char* runnerBmp = (runnerAnimFrame == 0) ? runner_walk1 : runner_walk2;
+  display.drawBitmap(68, 51, runnerBmp, 12, 12, SSD1306_WHITE);
+  display.setCursor(83, 52);
+  display.printf("%lustp", totalSteps);
 }
 
-// -------------------------------------------------------------
-// Screen Mode 2: Giant Retro Digital Clock & Weather / Temp
-// -------------------------------------------------------------
+// ============================================================================
+// Screen Mode 2: Giant Digital Watch & Core Vitals
+// ============================================================================
 void renderGiantClock() {
-  display.clearDisplay();
+  // Top Status Bar
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(2, 2);
+  display.printf("%s %02d %s %d", DAY_NAMES[curDayOfWeek], curDay, MONTH_NAMES[(curMonth - 1) % 12], curYear);
 
-  // Outer CRT Frame
-  display.drawRoundRect(2, 2, 124, 60, 4, SSD1306_WHITE);
+  display.setCursor(102, 2);
+  display.print((curHours >= 12) ? F("PM") : F("AM"));
 
-  // Clock Icon & Big Digits
-  display.drawBitmap(8, 6, clock_icon, 12, 12, SSD1306_WHITE);
+  display.drawFastHLine(0, 11, 128, SSD1306_WHITE);
 
+  // Big Double-Height Digital Clock
   int displayHours = curHours % 12;
   if (displayHours == 0) displayHours = 12;
-  const char* ampm = (curHours >= 12) ? "PM" : "AM";
 
   display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(24, 6);
-  display.printf("%2d:%02d", displayHours, curMinutes);
+  display.setCursor(4, 16);
+  char bigTimeBuf[10];
+  snprintf(bigTimeBuf, sizeof(bigTimeBuf), "%02d:%02d:%02d", displayHours, curMinutes, curSeconds);
+  display.print(bigTimeBuf);
 
+  display.drawFastHLine(0, 34, 128, SSD1306_WHITE);
+
+  // Core Vitals Telemetry
+  // 1. Thermometer + Core Temp
+  display.drawBitmap(2, 38, thermometer_icon, 9, 16, SSD1306_WHITE);
   display.setTextSize(1);
-  display.setCursor(88, 6);
-  display.printf(":%02d", curSeconds);
-  display.setCursor(88, 14);
-  display.print(ampm);
+  display.setCursor(14, 40);
+  display.printf("%.1f C (%.0f F)", currentTempC, currentTempF);
 
-  // Divider Line
-  display.drawFastHLine(6, 26, 116, SSD1306_WHITE);
-
-  // Temperature Section
-  display.drawBitmap(10, 32, thermometer_icon, 9, 16, SSD1306_WHITE);
-  display.setTextSize(2);
-  display.setCursor(24, 32);
-  display.printf("%.1f", currentTempC);
-
-  display.setTextSize(1);
-  display.setCursor(76, 32);
-  display.print("o"); // degree symbol
-  display.setTextSize(1);
-  display.setCursor(84, 34);
-  display.print("C");
-
-  display.setCursor(84, 44);
-  display.printf("(%.0f F)", currentTempF);
-
-  // Status Bar at bottom
-  display.setCursor(10, 52);
-  display.printf("CPU: %dMHz | Free: %uK", ESP.getCpuFreqMHz(), ESP.getFreeHeap() / 1024);
-
-  display.display();
+  // 2. CPU Freq & Free SRAM
+  display.drawBitmap(2, 51, chip_icon, 12, 12, SSD1306_WHITE);
+  display.setCursor(16, 53);
+  display.printf("160MHz | RAM %dK", ESP.getFreeHeap() / 1024);
 }
 
-// -------------------------------------------------------------
-// Screen Mode 3: Scrolling Historical Temperature Line Graph
-// -------------------------------------------------------------
+// ============================================================================
+// Screen Mode 3: Live Real-Time Telemetry Graph
+// ============================================================================
 void renderTempGraph() {
-  display.clearDisplay();
-
-  // Top header with current time & current temp
+  // Mini Clock in Header
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(4, 2);
+  display.setCursor(2, 2);
+  display.print(F("TEMP TELEMETRY"));
+
+  display.setCursor(80, 2);
+  char miniTimeBuf[10];
+  snprintf(miniTimeBuf, sizeof(miniTimeBuf), "%02d:%02d:%02d", curHours, curMinutes, curSeconds);
+  display.print(miniTimeBuf);
+
+  display.drawFastHLine(0, 11, 128, SSD1306_WHITE);
+
+  // Find min and max in telemetry buffer for auto-scaling
+  float minT = 100.0f, maxT = 0.0f;
+  for (int i = 0; i < TEMP_HISTORY_SIZE; i++) {
+    if (tempHistory[i] < minT) minT = tempHistory[i];
+    if (tempHistory[i] > maxT) maxT = tempHistory[i];
+  }
+  if (maxT - minT < 2.0f) {
+    maxT += 1.0f;
+    minT -= 1.0f;
+  }
+
+  // Draw Graph Axes Box
+  const int graphX = 2;
+  const int graphY = 14;
+  const int graphW = 124;
+  const int graphH = 36;
+  display.drawRect(graphX, graphY, graphW, graphH, SSD1306_WHITE);
+
+  // Plot 64 points (scaled to 120 pixels wide)
+  int prevPlotX = -1, prevPlotY = -1;
+  for (int i = 0; i < TEMP_HISTORY_SIZE; i++) {
+    int idx = (historyIndex + i) % TEMP_HISTORY_SIZE;
+    float val = tempHistory[idx];
+
+    int px = graphX + 2 + (i * (graphW - 4)) / (TEMP_HISTORY_SIZE - 1);
+    int py = graphY + graphH - 2 - (int)(((val - minT) / (maxT - minT)) * (graphH - 4));
+
+    if (py < graphY + 1) py = graphY + 1;
+    if (py > graphY + graphH - 2) py = graphY + graphH - 2;
+
+    if (prevPlotX != -1) {
+      display.drawLine(prevPlotX, prevPlotY, px, py, SSD1306_WHITE);
+    }
+    prevPlotX = px;
+    prevPlotY = py;
+  }
+
+  // Bottom Stats
+  display.setCursor(2, 54);
+  display.printf("LO:%.1f HI:%.1f NOW:%.1fC", minT, maxT, currentTempC);
+}
+
+// ============================================================================
+// Screen Mode 4: Walk & Activity Telemetry HUD
+// ============================================================================
+void renderWalkTelemetry() {
+  // Header: Walk Telemetry + Digital Clock
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(2, 2);
+  display.print(F("WALK TELEMETRY"));
+
+  display.setCursor(80, 2);
   display.printf("%02d:%02d:%02d", curHours, curMinutes, curSeconds);
 
-  display.drawBitmap(72, 0, thermometer_icon, 9, 16, SSD1306_WHITE);
-  display.setCursor(84, 2);
-  display.printf("%.1f C", currentTempC);
+  display.drawFastHLine(0, 11, 128, SSD1306_WHITE);
 
-  // Divider line
-  display.drawFastHLine(0, 14, 128, SSD1306_WHITE);
+  // Animated Runner Stride Icon
+  const unsigned char* runnerBmp = (runnerAnimFrame == 0) ? runner_walk1 : runner_walk2;
+  display.drawBitmap(4, 16, runnerBmp, 12, 12, SSD1306_WHITE);
 
-  // Graph Window Frame
-  display.drawRect(0, 16, 128, 48, SSD1306_WHITE);
+  // Large Steps Counter
+  display.setTextSize(2);
+  display.setCursor(20, 14);
+  display.print(totalSteps);
 
-  // Find min and max in history buffer for auto-scaling
-  float minT = 20.0f, maxT = 60.0f;
-  for (int i = 0; i < TEMP_HISTORY_SIZE; i++) {
-    if (tempHistory[i] > 0.0f) {
-      if (tempHistory[i] < minT) minT = tempHistory[i] - 1.0f;
-      if (tempHistory[i] > maxT) maxT = tempHistory[i] + 1.0f;
-    }
-  }
-
-  // Draw Temperature Curve
-  int graphX = 4;
-  for (int i = 0; i < TEMP_HISTORY_SIZE - 1; i++) {
-    int idx1 = (historyIndex + i) % TEMP_HISTORY_SIZE;
-    int idx2 = (historyIndex + i + 1) % TEMP_HISTORY_SIZE;
-
-    float val1 = tempHistory[idx1];
-    float val2 = tempHistory[idx2];
-
-    if (val1 > 0.0f && val2 > 0.0f) {
-      int y1 = 60 - (int)((val1 - minT) / (maxT - minT) * 40.0f);
-      int y2 = 60 - (int)((val2 - minT) / (maxT - minT) * 40.0f);
-      y1 = constrain(y1, 18, 61);
-      y2 = constrain(y2, 18, 61);
-      display.drawLine(graphX + i * 2, y1, graphX + (i + 1) * 2, y2, SSD1306_WHITE);
-    }
-  }
-
-  // Graph labels
   display.setTextSize(1);
-  display.setCursor(6, 18);
-  display.printf("%.0fC", maxT);
-  display.setCursor(6, 52);
-  display.printf("%.0fC", minT);
+  display.setCursor(20, 30);
+  display.print(F("STEPS TODAY"));
 
-  display.display();
+  display.drawFastHLine(0, 40, 128, SSD1306_WHITE);
+
+  // Lower Vitals Grid: Distance, Pace, Calories
+  display.setCursor(2, 43);
+  display.printf("DIST: %.2f km", distanceKm);
+
+  display.setCursor(2, 53);
+  display.printf("PACE: %d'%02d\"/km", walkPaceMin, walkPaceSec);
+
+  display.setCursor(82, 43);
+  display.printf("%d kcal", caloriesKcal);
+
+  display.setCursor(82, 53);
+  display.printf("%.1f C", currentTempC);
 }
 
-// -------------------------------------------------------------
-// Serial Interactive Commands
-// -------------------------------------------------------------
+// ============================================================================
+// Interactive Serial Command Handler
+// ============================================================================
 void handleSerialCommands() {
-  if (Serial.available()) {
+  while (Serial.available()) {
+    char c = Serial.peek();
+    if (c == ' ' || c == 'm' || c == 'M') {
+      Serial.read();
+      currentMode = (DisplayMode)((currentMode + 1) % 4);
+      autoCycleModes = false;
+      Serial.printf("[MODE] Switched to Mode %d\n", currentMode + 1);
+      continue;
+    } else if (c == 'w' || c == 'W') {
+      Serial.read();
+      totalSteps += 50;
+      distanceKm = totalSteps * 0.00075f;
+      caloriesKcal = (int)(totalSteps * 0.045f);
+      Serial.printf("[WALK] +50 Steps! Total: %lu (%.2f km)\n", totalSteps, distanceKm);
+      continue;
+    } else if (c == 'a' || c == 'A') {
+      Serial.read();
+      autoCycleModes = !autoCycleModes;
+      Serial.printf("[AUTO] Auto-cycle: %s\n", autoCycleModes ? "ON" : "OFF");
+      continue;
+    } else if (c == '+' || c == '=') {
+      Serial.read();
+      if (displayContrast <= 235) displayContrast += 20;
+      display.ssd1306_command(SSD1306_SETCONTRAST);
+      display.ssd1306_command(displayContrast);
+      Serial.printf("[BRIGHTNESS] Contrast increased to 0x%02X\n", displayContrast);
+      continue;
+    } else if (c == '-' || c == '_') {
+      Serial.read();
+      if (displayContrast >= 30) displayContrast -= 20;
+      display.ssd1306_command(SSD1306_SETCONTRAST);
+      display.ssd1306_command(displayContrast);
+      Serial.printf("[BRIGHTNESS] Contrast decreased to 0x%02X\n", displayContrast);
+      continue;
+    } else if (c >= '1' && c <= '4') {
+      Serial.read();
+      currentMode = (DisplayMode)(c - '1');
+      autoCycleModes = false;
+      Serial.printf("[MODE] Jumped to Mode %d\n", currentMode + 1);
+      continue;
+    }
+
     String line = Serial.readStringUntil('\n');
     line.trim();
+    if (line.length() == 0) continue;
 
     if (line.startsWith("time ")) {
-      // Format: time HH:MM:SS
       int h, m, s;
-      if (sscanf(line.c_str(), "time %d:%d:%d", &h, &m, &s) == 3) {
+      if (sscanf(line.c_str() + 5, "%d:%d:%d", &h, &m, &s) == 3) {
         curHours = h; curMinutes = m; curSeconds = s;
-        Serial.printf("[CLOCK] Time set to %02d:%02d:%02d\n", curHours, curMinutes, curSeconds);
-      }
-    } else if (line.startsWith("date ")) {
-      // Format: date YYYY-MM-DD
-      int y, m, d;
-      if (sscanf(line.c_str(), "date %d-%d-%d", &y, &m, &d) == 3) {
-        curYear = y; curMonth = m; curDay = d;
-        Serial.printf("[CLOCK] Date set to %d-%02d-%02d\n", curYear, curMonth, curDay);
+        Serial.printf("[TIME] Clock set to %02d:%02d:%02d\n", curHours, curMinutes, curSeconds);
       }
     } else if (line.startsWith("wifi ")) {
-      // Format: wifi SSID PASSWORD
       int spaceIdx = line.indexOf(' ', 5);
-      if (spaceIdx > 0) {
-        String ssid = line.substring(5, spaceIdx);
-        String pass = line.substring(spaceIdx + 1);
-        Serial.printf("[WIFI] Connecting to '%s'...\n", ssid.c_str());
-        WiFi.begin(ssid.c_str(), pass.c_str());
+      if (spaceIdx > 5) {
+        wifiSSID = line.substring(5, spaceIdx);
+        wifiPassword = line.substring(spaceIdx + 1);
+        Serial.printf("[WIFI] Set credentials for '%s'\n", wifiSSID.c_str());
+        WiFi.disconnect();
       }
-    } else if (line == "mode") {
-      currentMode = (DisplayMode)((currentMode + 1) % 3);
-      Serial.printf("[MODE] Switched to Mode %d\n", currentMode);
-    } else if (line == "temp") {
-      Serial.printf("[STATUS] Core Temp: %.2f °C | %.2f °F | Heap: %u bytes\n",
+    } else if (line.equalsIgnoreCase("temp")) {
+      Serial.printf("[TELEMETRY] Core Temp: %.2f C (%.2f F) | Free Heap: %d B\n",
                     currentTempC, currentTempF, ESP.getFreeHeap());
     }
   }
 }
 
-// -------------------------------------------------------------
-// Setup & Loop
-// -------------------------------------------------------------
-void setup() {
-  Serial.begin(115200);
-  delay(1000);
+// ============================================================================
+// FreeRTOS Wi-Fi Background Worker (Auto-connects & syncs NTP)
+// ============================================================================
+void wifiBackgroundWorker(void* pvParameters) {
+  while (true) {
+    if (WiFi.status() != WL_CONNECTED) {
+      wifiConnected = false;
+      Serial.printf("[WIFI WORKER] Connecting to '%s'...\n", wifiSSID.c_str());
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(wifiSSID.c_str(), wifiPassword.c_str());
 
-  Serial.println("\n\n========================================================");
-  Serial.println("  ESP32-C3 SuperMini Macintosh Clock & Temperature HUD  ");
-  Serial.println("========================================================");
+      int attempts = 0;
+      while (WiFi.status() != WL_CONNECTED && attempts < 15) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        attempts++;
+      }
 
-  // Initialize temperature history buffer
-  for (int i = 0; i < TEMP_HISTORY_SIZE; i++) {
-    tempHistory[i] = 37.0f;
+      if (WiFi.status() == WL_CONNECTED) {
+        wifiConnected = true;
+        Serial.printf("[WIFI WORKER] Connected! IP: %s\n", WiFi.localIP().toString().c_str());
+        configTime(gmtOffsetSec, daylightOffsetSec, "pool.ntp.org", "time.nist.gov");
+      } else {
+        Serial.println(F("[WIFI WORKER] Connection failed. Retrying in 10s..."));
+        vTaskDelay(pdMS_TO_TICKS(10000));
+        continue;
+      }
+    } else {
+      wifiConnected = true;
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(5000));
   }
-
-  // Initialize High-Speed I2C for 0.96" OLED
-  Wire.begin(I2C_SDA, I2C_SCL);
-  Wire.setClock(800000);
-
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Wire.begin(9, 8);
-    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  }
-  Wire.setClock(1000000); // 1MHz high speed
-
-  display.clearDisplay();
-  display.display();
-
-  lastTickMillis = millis();
-  lastModeSwitch = millis();
-  lastGraphSample = millis();
-
-  Serial.println("[OK] Clock & Temperature HUD Initialized.");
-  Serial.println("Commands:");
-  Serial.println("  time HH:MM:SS       -> Set current time");
-  Serial.println("  date YYYY-MM-DD     -> Set current date");
-  Serial.println("  wifi SSID PASSWORD  -> Connect Wi-Fi & auto-sync NTP");
-  Serial.println("  mode                -> Switch display view (1/2/3)");
-  Serial.println("  temp                -> Print current temperature");
-  Serial.println("========================================================\n");
 }
-
-void loop() {
-  handleSerialCommands();
-
-  // Tick clock every 1 second
-  if (millis() - lastTickMillis >= 1000) {
-    lastTickMillis = millis();
-    advanceClockOneSecond();
-    updateTemperature();
-  }
-
-  // Auto-cycle through the 3 viewing modes every 10 seconds
-  if (millis() - lastModeSwitch >= 10000) {
-    lastModeSwitch = millis();
-    currentMode = (DisplayMode)((currentMode + 1) % 3);
-  }
-
-  // Render active mode
-  switch (currentMode) {
-    case MODE_SYSTEM_WINDOW: renderSystemWindow(); break;
-    case MODE_GIANT_CLOCK:   renderGiantClock();   break;
-    case MODE_TEMP_GRAPH:    renderTempGraph();    break;
-  }
-
-  delay(50);
-}
-
