@@ -12,19 +12,24 @@ An open-source embedded graphics ecosystem featuring **four distinct projects** 
 
 ## 🗂️ Project Portfolio
 
-| Project | Target Microcontroller | Display Module | Frame Rate | Key Highlights | Location |
-|---|---|---|---|---|---|
-| **🤖 Desk Buggy** | ESP32-WROOM-32 (240MHz) | 1.8" ST7735 Color TFT (SPI) | ~33 FPS | BMO & Baymax animated companions, AS608 fingerprint touch gestures, buzzer audio | [`src/`](src/) |
-| **🖥️ Macintosh Desk Buddy** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | **60 FPS** | 7 retro 1984 Mac moods, animated cursive `"hello."`, System 1.0 desktop | [`macintosh-desk-buddy/`](macintosh-desk-buddy/) |
-| **🌡️ Macintosh Clock & Temp HUD** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 30 FPS | Live clock, on-chip silicon core temp (°C/°F), 64-pt scrolling graph, NTP sync | [`macintosh-clock-temp/`](macintosh-clock-temp/) |
-| **🔥 DOOM 60 FPS Engine** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | **60 FPS** | 128-ray 3D DDA raycaster, depth dithering, animated shotgun, 3D imps, PSX fire | [`doom-oled/`](doom-oled/) |
-| **☀️ Weather & Clock Station** | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 33 FPS | Live Open-Meteo weather API, location badge, temp/humidity/wind, NTP clock, celestial sky arc | [`weather-clock-station/`](weather-clock-station/) |
-| **🌈 Color TFT Weather Station**| ESP32-C3 SuperMini (160MHz) | 1.8" ST7735 Color TFT (SPI) | 30 FPS | Full 16-bit RGB565 color dashboard, Pune weather, NTP clock, auto-shuts OLED OFF | [`tft-weather-station/`](tft-weather-station/) |
-| **🐱 Chibi Cute Face Motion**   | ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | **60 FPS** | Sparkly anime eyes, ear twitches, sub-pixel breathing, blinks, blush, floating hearts | [`chibi-face/`](chibi-face/) |
-| **⚡ Sleeping Pikachu Companion**| ESP32-C3 SuperMini (160MHz) | 0.96" SSD1306 OLED (I2C) | 33 FPS | Laying Pikachu snoozing, deep breathing, tail wags, cheek electric sparks, floating Zzz | [`pikachu-oled/`](pikachu-oled/) |
-| **📟 Hangry Mood Scroll Badge** | ESP32-WROOM-32 (240MHz) | 1.8" ST7735 Color TFT (SPI) | **50 FPS** | Double-buffered marquee ticker, iconic pastel pink `:( hangry`, customizable themes & live text | [`tft-scroll-badge/`](tft-scroll-badge/) |
-| **🌸 Anime Telemetry Watch HUD**| ESP32-WROOM-32 (240MHz) | 1.8" ST7735 Color TFT (SPI) | 30 FPS | 16-bit pixel art anime companion (blinking & breathing), NTP clock, Pune location, GitHub commits & silicon temp | [`anime-telemetry-watch/`](anime-telemetry-watch/) |
-| **🐙 Dev GitHub Telemetry Watch**| ESP32-WROOM-32 (240MHz) | 1.8" ST7735 Color TFT (SPI) | 30 FPS | Full-width developer HUD: live NTP clock, Pune location, core temp, @joyboy-pega contributions & heatmap | [`github-telemetry-watch/`](github-telemetry-watch/) |
+### 🌈 1.8" ST7735 Color TFT Firmware (ESP32-WROOM-32 @ 240MHz, SPI)
+| Project | Frame Rate | Key Highlights | Location |
+|---|---|---|---|
+| **🐙 Dev GitHub Telemetry Watch** | 30 FPS | Full-width developer HUD: NTP clock, Pune location, core temp, @joyboy-pega contributions & web control | [`tft-github-telemetry-watch/`](tft-github-telemetry-watch/) (and default [`src/`](src/)) |
+| **🌸 Anime Telemetry Watch HUD**  | 30 FPS | 16-bit pixel art anime companion (blinking & breathing), NTP clock, Pune location, GitHub stats | [`tft-anime-telemetry-watch/`](tft-anime-telemetry-watch/) |
+| **📟 Hangry Mood Scroll Badge**   | **50 FPS** | Double-buffered marquee ticker, iconic pastel pink `:( hangry`, web control portal & live text | [`tft-scroll-badge/`](tft-scroll-badge/) |
+| **🌦️ Color TFT Weather Station**   | 30 FPS | Full 16-bit RGB565 color dashboard, Pune weather, NTP clock | [`tft-weather-station/`](tft-weather-station/) |
+
+### 📟 0.96" SSD1306 OLED Firmware (ESP32-C3 SuperMini @ 160MHz, I2C Fast Mode+)
+| Project | Frame Rate | Key Highlights | Location |
+|---|---|---|---|
+| **🤖 Desk Buggy (Baymax)**        | 30 FPS | Baymax animated blinking eyes, I2C scanner & smooth interpolation | [`oled-desk-buggy/`](oled-desk-buggy/) |
+| **🖥️ Macintosh Desk Buddy**        | **60 FPS** | 7 retro 1984 Mac moods, animated cursive `"hello."`, System 1.0 desktop | [`oled-macintosh-buddy/`](oled-macintosh-buddy/) |
+| **🌡️ Macintosh Clock & Temp HUD**  | 30 FPS | Live clock, on-chip silicon core temp (°C/°F), 64-pt scrolling graph, NTP sync | [`oled-macintosh-clock/`](oled-macintosh-clock/) |
+| **🔥 DOOM 60 FPS Engine**         | **60 FPS** | 128-ray 3D DDA raycaster, depth dithering, animated shotgun, 3D imps, PSX fire | [`oled-doom/`](oled-doom/) |
+| **🐱 Chibi Cute Face Motion**      | **60 FPS** | Sparkly anime eyes, ear twitches, sub-pixel breathing, blinks, blush, floating hearts | [`oled-chibi-face/`](oled-chibi-face/) |
+| **⚡ Sleeping Pikachu Companion**   | 33 FPS | Laying Pikachu snoozing, deep breathing, tail wags, cheek sparks, floating Zzz | [`oled-pikachu/`](oled-pikachu/) |
+| **☀️ Weather & Clock Station**     | 33 FPS | Live Open-Meteo weather API, location badge, temp/humidity/wind, NTP clock, sky arc | [`oled-weather-station/`](oled-weather-station/) |
 
 ---
 
