@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FIRMWARE_PRESETS, FirmwarePreset } from '../lib/firmwarePresets';
 import { HardwareScreenSimulator } from '../components/HardwareScreenSimulator';
 import { WebHardwareFlasher } from '../components/WebHardwareFlasher';
@@ -20,6 +20,38 @@ export default function HomePage() {
       workbenchRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
   };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing in input/textarea
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+
+      if (e.key === 'Escape') {
+        setSelectedPreset(null);
+      } else if (e.key === 'ArrowDown' || e.key === 'j') {
+        if (!selectedPreset) {
+          handleSelectProject(FIRMWARE_PRESETS[0]);
+        } else {
+          const idx = FIRMWARE_PRESETS.findIndex((p) => p.id === selectedPreset.id);
+          const next = FIRMWARE_PRESETS[(idx + 1) % FIRMWARE_PRESETS.length];
+          handleSelectProject(next);
+        }
+      } else if (e.key === 'ArrowUp' || e.key === 'k') {
+        if (!selectedPreset) {
+          handleSelectProject(FIRMWARE_PRESETS[FIRMWARE_PRESETS.length - 1]);
+        } else {
+          const idx = FIRMWARE_PRESETS.findIndex((p) => p.id === selectedPreset.id);
+          const prev = FIRMWARE_PRESETS[(idx - 1 + FIRMWARE_PRESETS.length) % FIRMWARE_PRESETS.length];
+          handleSelectProject(prev);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPreset]);
 
   return (
     <main className="min-h-screen bg-[#070707] text-gray-200 font-mono text-xs flex flex-col">
@@ -208,13 +240,18 @@ export default function HomePage() {
                     {selectedPreset.chip} · {selectedPreset.display} · {selectedPreset.fps}fps
                   </span>
                 </div>
-                <button
-                  onClick={() => setSelectedPreset(null)}
-                  className="ml-3 p-1 text-neutral-600 hover:text-neutral-200 rounded transition-colors shrink-0"
-                  title="Close workbench"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] text-neutral-600 hidden md:inline">
+                    <kbd className="px-1 py-0.5 bg-[#181818] border border-[#2c2c2c] rounded text-neutral-400">↑/↓</kbd> switch · <kbd className="px-1 py-0.5 bg-[#181818] border border-[#2c2c2c] rounded text-neutral-400">ESC</kbd> close
+                  </span>
+                  <button
+                    onClick={() => setSelectedPreset(null)}
+                    className="p-1 text-neutral-600 hover:text-neutral-200 rounded transition-colors shrink-0"
+                    title="Close workbench (ESC)"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               {/* Simulator + Flasher side-by-side */}

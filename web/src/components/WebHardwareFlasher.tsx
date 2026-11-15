@@ -28,6 +28,8 @@ export const WebHardwareFlasher: React.FC<WebHardwareFlasherProps> = ({ preset }
   const [isMonitorActive, setIsMonitorActive] = useState<boolean>(false);
   const [serialLogs, setSerialLogs] = useState<{ text: string; type: string; time: string }[]>([]);
   const [commandInput, setCommandInput] = useState<string>('');
+  const [autoScroll, setAutoScroll] = useState<boolean>(true);
+  const [logFilter, setLogFilter] = useState<string>('');
   const logContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Custom File Upload
@@ -58,10 +60,10 @@ export const WebHardwareFlasher: React.FC<WebHardwareFlasherProps> = ({ preset }
   }, []);
 
   useEffect(() => {
-    if (logContainerRef.current) {
+    if (autoScroll && logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
-  }, [serialLogs]);
+  }, [serialLogs, autoScroll]);
 
   const handleConnect = async () => {
     if (!flasher) return;
@@ -341,9 +343,28 @@ export const WebHardwareFlasher: React.FC<WebHardwareFlasherProps> = ({ preset }
 
       {/* Integrated Serial Monitor */}
       <div className="border-t border-[#222] bg-[#0a0a0a] p-3 flex flex-col gap-2">
-        <div className="flex items-center justify-between text-[11px]">
-          <span className="text-gray-400 font-bold">SERIAL MONITOR (115200)</span>
+        <div className="flex flex-wrap items-center justify-between text-[11px] gap-2">
           <div className="flex items-center gap-2">
+            <span className="text-gray-400 font-bold">SERIAL MONITOR (115200)</span>
+            <label className="flex items-center gap-1 text-[10px] text-neutral-500 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={autoScroll}
+                onChange={(e) => setAutoScroll(e.target.checked)}
+                className="rounded bg-[#1a1a1a] border-[#333] accent-neutral-400 w-3 h-3"
+              />
+              <span>Auto-scroll</span>
+            </label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={logFilter}
+              onChange={(e) => setLogFilter(e.target.value)}
+              placeholder="Filter logs..."
+              className="px-2 py-0.5 bg-[#141414] border border-[#262626] rounded text-[10px] text-neutral-300 w-28 focus:outline-none focus:w-36 transition-all"
+            />
             <button
               onClick={handleToggleMonitor}
               className="text-gray-400 hover:text-white underline text-[11px]"
@@ -367,21 +388,29 @@ export const WebHardwareFlasher: React.FC<WebHardwareFlasherProps> = ({ preset }
           {serialLogs.length === 0 ? (
             <span className="text-neutral-700">Serial logs will appear here when connected...</span>
           ) : (
-            serialLogs.map((log, idx) => (
-              <div
-                key={idx}
-                className={
-                  log.type === 'error'
-                    ? 'text-red-400'
-                    : log.type === 'input'
-                    ? 'text-amber-400'
-                    : 'text-neutral-300'
+            serialLogs
+              .filter((log) => !logFilter || log.text.toLowerCase().includes(logFilter.toLowerCase()))
+              .map((log, idx) => {
+                let colorClass = 'text-neutral-300';
+                const lower = log.text.toLowerCase();
+
+                if (log.type === 'error' || lower.includes('[error]') || log.text.includes('E (')) {
+                  colorClass = 'text-red-400 font-semibold';
+                } else if (lower.includes('[warn]') || log.text.includes('W (')) {
+                  colorClass = 'text-amber-400';
+                } else if (lower.includes('[info]') || log.text.includes('I (')) {
+                  colorClass = 'text-cyan-400';
+                } else if (log.type === 'input') {
+                  colorClass = 'text-emerald-400 font-medium';
                 }
-              >
-                <span className="text-neutral-600 mr-1.5">[{log.time}]</span>
-                {log.text}
-              </div>
-            ))
+
+                return (
+                  <div key={idx} className={colorClass}>
+                    <span className="text-neutral-600 mr-1.5">[{log.time}]</span>
+                    {log.text}
+                  </div>
+                );
+              })
           )}
         </div>
 

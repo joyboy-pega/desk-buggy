@@ -5,7 +5,7 @@ import { FirmwarePreset } from '../lib/firmwarePresets';
 import { 
   Play, Pause, RotateCcw, ZoomIn, ZoomOut, Maximize2, 
   Sparkles, Monitor, Cpu, Radio, Shield, Zap, Flame, Eye,
-  Sliders, Compass
+  Sliders, Compass, Camera, ArrowUp, ArrowDown, ArrowLeft, ArrowRight
 } from 'lucide-react';
 
 interface HardwareScreenSimulatorProps {
@@ -112,6 +112,44 @@ export const HardwareScreenSimulator: React.FC<HardwareScreenSimulatorProps> = (
       stateRef.current.shotgunFlash = false;
     }, 90);
     if (onSendCommand) onSendCommand('f');
+  };
+
+  // DOOM On-screen D-Pad Controls
+  const moveDoomForward = () => {
+    const s = stateRef.current;
+    const nx = s.playerX + Math.cos(s.playerAngle) * 0.3;
+    const ny = s.playerY + Math.sin(s.playerAngle) * 0.3;
+    if (DOOM_MAP[Math.floor(ny)]?.[Math.floor(nx)] === 0) {
+      s.playerX = nx;
+      s.playerY = ny;
+    }
+  };
+
+  const moveDoomBackward = () => {
+    const s = stateRef.current;
+    const nx = s.playerX - Math.cos(s.playerAngle) * 0.3;
+    const ny = s.playerY - Math.sin(s.playerAngle) * 0.3;
+    if (DOOM_MAP[Math.floor(ny)]?.[Math.floor(nx)] === 0) {
+      s.playerX = nx;
+      s.playerY = ny;
+    }
+  };
+
+  const rotateDoomLeft = () => {
+    stateRef.current.playerAngle -= 0.2;
+  };
+
+  const rotateDoomRight = () => {
+    stateRef.current.playerAngle += 0.2;
+  };
+
+  // Snapshot PNG export
+  const handleDownloadSnapshot = () => {
+    if (!canvasRef.current) return;
+    const link = document.createElement('a');
+    link.download = `${preset.id}-screen-${Date.now()}.png`;
+    link.href = canvasRef.current.toDataURL('image/png');
+    link.click();
   };
 
   // DOOM Keyboard Listeners
@@ -1223,6 +1261,16 @@ export const HardwareScreenSimulator: React.FC<HardwareScreenSimulatorProps> = (
           >
             {isPlaying ? 'Pause' : 'Play'}
           </button>
+
+          {/* Snapshot PNG */}
+          <button
+            onClick={handleDownloadSnapshot}
+            className="flex items-center gap-1 px-2 py-0.5 bg-[#1a1a1a] border border-[#333] text-neutral-300 hover:text-white rounded text-[11px]"
+            title="Download crisp 1:1 PNG snapshot"
+          >
+            <Camera className="w-3 h-3 text-neutral-400" />
+            <span>PNG</span>
+          </button>
         </div>
       </div>
 
@@ -1297,12 +1345,43 @@ export const HardwareScreenSimulator: React.FC<HardwareScreenSimulatorProps> = (
           )}
 
           {preset.id === 'oled-doom' && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 bg-[#141414] border border-[#262626] rounded p-1">
+                <button
+                  onClick={rotateDoomLeft}
+                  className="p-1 hover:bg-[#252525] rounded text-neutral-400 hover:text-white"
+                  title="Turn Left (A)"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={moveDoomForward}
+                  className="p-1 hover:bg-[#252525] rounded text-neutral-400 hover:text-white"
+                  title="Forward (W)"
+                >
+                  <ArrowUp className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={moveDoomBackward}
+                  className="p-1 hover:bg-[#252525] rounded text-neutral-400 hover:text-white"
+                  title="Backward (S)"
+                >
+                  <ArrowDown className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={rotateDoomRight}
+                  className="p-1 hover:bg-[#252525] rounded text-neutral-400 hover:text-white"
+                  title="Turn Right (D)"
+                >
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
               <button
                 onClick={fireDoomShotgun}
                 className="px-2.5 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-[11px] font-bold"
               >
-                FIRE SHOTGUN (F)
+                FIRE (F)
               </button>
               <button
                 onClick={() => setDoomShowMap(!doomShowMap)}
