@@ -1,0 +1,306 @@
+export interface FirmwareFile {
+  name: string;
+  url: string;
+  offset: number;
+}
+
+export interface FirmwarePreset {
+  id: string;
+  title: string;
+  subtitle: string;
+  category: 'oled' | 'tft';
+  chip: 'ESP32' | 'ESP32-C3';
+  display: 'SSD1306 OLED (128x64)' | 'ST7735 TFT (160x128)';
+  width: number;
+  height: number;
+  fps: number;
+  badgeColor: string;
+  description: string;
+  commands: { key: string; label: string; action: string }[];
+  files: FirmwareFile[];
+}
+
+export const FIRMWARE_PRESETS: FirmwarePreset[] = [
+  {
+    id: 'esp32-nothing-hud',
+    title: 'Nothing OS Telemetry HUD v2',
+    subtitle: '1.8" Color TFT • Dot-Matrix & IST Time',
+    category: 'tft',
+    chip: 'ESP32',
+    display: 'ST7735 TFT (160x128)',
+    width: 160,
+    height: 128,
+    fps: 30,
+    badgeColor: '#E01A22',
+    description: 'Iconic Nothing OS design language with custom dot-matrix typography, IST NTP clock, Pune location, core temp telemetry, and PWM dimming.',
+    commands: [
+      { key: '+', label: 'Bright +', action: '+' },
+      { key: '-', label: 'Bright -', action: '-' },
+      { key: '5', label: '50% Bright', action: '5' },
+      { key: '9', label: '100% Bright', action: '9' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/esp32-nothing-hud/bootloader.bin', offset: 0x1000 },
+      { name: 'partitions.bin', url: '/firmware/esp32-nothing-hud/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/esp32-nothing-hud/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'oled-doom',
+    title: 'DOOM 60 FPS Raycaster',
+    subtitle: '0.96" OLED • 3D Engine & Animated Shotgun',
+    category: 'oled',
+    chip: 'ESP32-C3',
+    display: 'SSD1306 OLED (128x64)',
+    width: 128,
+    height: 64,
+    fps: 60,
+    badgeColor: '#00F0FF',
+    description: 'A complete 128-ray DDA 3D Raycaster running at 60 FPS on ESP32-C3 with double-barrel shotgun, muzzle flash, mini-map, and PSX DOOM Fire!',
+    commands: [
+      { key: 'w', label: 'Forward (W)', action: 'w' },
+      { key: 's', label: 'Back (S)', action: 's' },
+      { key: 'a', label: 'Turn L (A)', action: 'a' },
+      { key: 'd', label: 'Turn R (D)', action: 'd' },
+      { key: 'f', label: 'Fire Shotgun', action: 'f' },
+      { key: 'm', label: 'Toggle Radar', action: 'm' },
+      { key: '2', label: 'DOOM Fire', action: '2' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/oled-doom/bootloader.bin', offset: 0x0000 },
+      { name: 'partitions.bin', url: '/firmware/oled-doom/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/oled-doom/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'oled-mac-buddy',
+    title: 'Macintosh 1984 Desk Buddy',
+    subtitle: '0.96" OLED • System 1.0 & "hello."',
+    category: 'oled',
+    chip: 'ESP32-C3',
+    display: 'SSD1306 OLED (128x64)',
+    width: 128,
+    height: 64,
+    fps: 60,
+    badgeColor: '#EAB308',
+    description: 'Retro 1984 Macintosh companion: animated cursive "hello.", floating System 1.0 desktop window, Happy Mac CRT, and floppy disk animations.',
+    commands: [
+      { key: '1', label: '"hello." Intro', action: '1' },
+      { key: '2', label: 'Desktop Window', action: '2' },
+      { key: '3', label: 'Happy Mac', action: '3' },
+      { key: '4', label: 'CRT Face', action: '4' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/oled-mac-buddy/bootloader.bin', offset: 0x0000 },
+      { name: 'partitions.bin', url: '/firmware/oled-mac-buddy/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/oled-mac-buddy/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'oled-desk-buggy',
+    title: 'Desk Buggy (Baymax Companion)',
+    subtitle: '0.96" OLED • Animated Expressive Eyes',
+    category: 'oled',
+    chip: 'ESP32-C3',
+    display: 'SSD1306 OLED (128x64)',
+    width: 128,
+    height: 64,
+    fps: 30,
+    badgeColor: '#10B981',
+    description: 'Iconic Baymax eyes connected by bridge line with organic breathing, multi-stage natural blinks, squinting, and health scan animations.',
+    commands: [
+      { key: 'b', label: 'Blink Eyes', action: 'b' },
+      { key: 's', label: 'Health Scan', action: 's' },
+      { key: 'a', label: 'Auto Idle', action: 'a' },
+      { key: 'c', label: 'Chirp Audio', action: 'c' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/oled-desk-buggy/bootloader.bin', offset: 0x0000 },
+      { name: 'partitions.bin', url: '/firmware/oled-desk-buggy/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/oled-desk-buggy/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'oled-mac-clock',
+    title: 'Macintosh Clock & Silicon Temp HUD',
+    subtitle: '0.96" OLED • 64-pt Rolling Graph & NTP',
+    category: 'oled',
+    chip: 'ESP32-C3',
+    display: 'SSD1306 OLED (128x64)',
+    width: 128,
+    height: 64,
+    fps: 30,
+    badgeColor: '#3B82F6',
+    description: 'Vintage Mac OS window telemetry monitor featuring a real-time 64-point historical temperature graph, NTP digital clock, and free heap RAM.',
+    commands: [
+      { key: 'mode\n', label: 'Cycle Mode', action: 'mode\n' },
+      { key: 'temp\n', label: 'Query Temp', action: 'temp\n' },
+      { key: 'wifi Arigatoo1 12345678\n', label: 'Connect WiFi', action: 'wifi Arigatoo1 12345678\n' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/oled-mac-clock/bootloader.bin', offset: 0x0000 },
+      { name: 'partitions.bin', url: '/firmware/oled-mac-clock/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/oled-mac-clock/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'oled-chibi-face',
+    title: 'Chibi Cute Face Motion',
+    subtitle: '0.96" OLED • Sparkly Anime Expressions',
+    category: 'oled',
+    chip: 'ESP32-C3',
+    display: 'SSD1306 OLED (128x64)',
+    width: 128,
+    height: 64,
+    fps: 60,
+    badgeColor: '#EC4899',
+    description: 'Sparkly anime eyes with dynamic pupils, blushing cheeks, cat ear twitches, sub-pixel breathing sine wave, and floating heart particles.',
+    commands: [
+      { key: '1', label: 'Happy Sparkle', action: '1' },
+      { key: '2', label: 'Joy Arch ^ ^', action: '2' },
+      { key: '3', label: 'Playful Wink', action: '3' },
+      { key: '4', label: 'Shy Love', action: '4' },
+      { key: 'p', label: 'Pet Companion', action: 'p' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/oled-chibi-face/bootloader.bin', offset: 0x0000 },
+      { name: 'partitions.bin', url: '/firmware/oled-chibi-face/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/oled-chibi-face/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'oled-pikachu',
+    title: 'Sleeping Pikachu Companion',
+    subtitle: '0.96" OLED • Belly Breathing & Zzz',
+    category: 'oled',
+    chip: 'ESP32-C3',
+    display: 'SSD1306 OLED (128x64)',
+    width: 128,
+    height: 64,
+    fps: 33,
+    badgeColor: '#F59E0B',
+    description: 'Cozy sleeping Pikachu curled up on your desk with animated belly breathing expansion, cheek electric sparks, and floating Zzz bubbles.',
+    commands: [
+      { key: 's', label: 'Deep Sleep', action: 's' },
+      { key: 'w', label: 'Wake / Peek', action: 'w' },
+      { key: 'd', label: 'Dream Sparks', action: 'd' },
+      { key: 't', label: 'Tail Flick', action: 't' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/oled-pikachu/bootloader.bin', offset: 0x0000 },
+      { name: 'partitions.bin', url: '/firmware/oled-pikachu/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/oled-pikachu/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'oled-weather',
+    title: 'Smart Weather & Clock Station',
+    subtitle: '0.96" OLED • Open-Meteo & Celestial Arc',
+    category: 'oled',
+    chip: 'ESP32-C3',
+    display: 'SSD1306 OLED (128x64)',
+    width: 128,
+    height: 64,
+    fps: 33,
+    badgeColor: '#06B6D4',
+    description: 'Live atmospheric station featuring Open-Meteo API sync, celestial sun/moon arc traversal, weather glyphs, and NTP clock sync.',
+    commands: [
+      { key: 'mode\n', label: 'Cycle Card', action: 'mode\n' },
+      { key: 'city pune\n', label: 'City Pune', action: 'city pune\n' },
+      { key: 'unit C\n', label: 'Unit °C', action: 'unit C\n' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/oled-weather/bootloader.bin', offset: 0x0000 },
+      { name: 'partitions.bin', url: '/firmware/oled-weather/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/oled-weather/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'tft-anime-telemetry',
+    title: 'Anime Telemetry Watch HUD',
+    subtitle: '1.8" Color TFT • 16-bit Pixel Avatar',
+    category: 'tft',
+    chip: 'ESP32',
+    display: 'ST7735 TFT (160x128)',
+    width: 160,
+    height: 128,
+    fps: 30,
+    badgeColor: '#A855F7',
+    description: 'Pixel art anime avatar companion with organic breathing, dynamic blinking, clock HUD, and dev stats on full 16-bit RGB565 TFT.',
+    commands: [
+      { key: 'b', label: 'Blink Avatar', action: 'b' },
+      { key: 'm', label: 'Toggle Mood', action: 'm' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/tft-anime-telemetry/bootloader.bin', offset: 0x1000 },
+      { name: 'partitions.bin', url: '/firmware/tft-anime-telemetry/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/tft-anime-telemetry/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'tft-scroll-badge',
+    title: 'Hangry Mood Scroll Badge',
+    subtitle: '1.8" Color TFT • 50 FPS Pastel Marquee',
+    category: 'tft',
+    chip: 'ESP32',
+    display: 'ST7735 TFT (160x128)',
+    width: 160,
+    height: 128,
+    fps: 50,
+    badgeColor: '#F472B6',
+    description: '50 FPS double-buffered smooth marquee ticker in signature pastel pink with ":( hangry" mood display, battery meter, and status badges.',
+    commands: [
+      { key: 's', label: 'Speed Up', action: 's' },
+      { key: 't', label: 'Toggle Text', action: 't' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/tft-scroll-badge/bootloader.bin', offset: 0x1000 },
+      { name: 'partitions.bin', url: '/firmware/tft-scroll-badge/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/tft-scroll-badge/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'tft-weather',
+    title: 'Color TFT Weather Station',
+    subtitle: '1.8" Color TFT • 16-bit RGB565 Dashboard',
+    category: 'tft',
+    chip: 'ESP32-C3',
+    display: 'ST7735 TFT (160x128)',
+    width: 160,
+    height: 128,
+    fps: 30,
+    badgeColor: '#38BDF8',
+    description: 'Full color RGB565 weather dashboard with meteorological condition icons, temperature bar, humidity dial, and NTP clock.',
+    commands: [
+      { key: 'm', label: 'Next Page', action: 'm' },
+      { key: 'r', label: 'Refresh Data', action: 'r' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/tft-weather/bootloader.bin', offset: 0x0000 },
+      { name: 'partitions.bin', url: '/firmware/tft-weather/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/tft-weather/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
+    id: 'tft-macbook-cam',
+    title: 'MacBook Cam Receiver HUD',
+    subtitle: '1.8" Color TFT • High-Speed UART Video Stream',
+    category: 'tft',
+    chip: 'ESP32',
+    display: 'ST7735 TFT (160x128)',
+    width: 160,
+    height: 128,
+    fps: 30,
+    badgeColor: '#6366F1',
+    description: 'High-speed 921,600 baud streaming video receiver that renders live FaceTime camera feeds on the 1.8" ST7735 display.',
+    commands: [
+      { key: 'i', label: 'Stream Info', action: 'i' },
+      { key: 'r', label: 'Reset Frame', action: 'r' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/tft-macbook-cam/bootloader.bin', offset: 0x1000 },
+      { name: 'partitions.bin', url: '/firmware/tft-macbook-cam/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/tft-macbook-cam/firmware.bin', offset: 0x10000 },
+    ],
+  },
+];
