@@ -5,7 +5,7 @@ import { FIRMWARE_PRESETS, FirmwarePreset } from '../lib/firmwarePresets';
 import { HardwareScreenSimulator } from '../components/HardwareScreenSimulator';
 import { WebHardwareFlasher } from '../components/WebHardwareFlasher';
 import { HardwarePinouts } from '../components/HardwarePinouts';
-import { Cpu, Zap, Monitor, ArrowRight, X, ChevronDown } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 
 export default function HomePage() {
   const [selectedPreset, setSelectedPreset] = useState<FirmwarePreset | null>(null);
@@ -23,283 +23,235 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen bg-[#070707] text-gray-200 font-mono text-xs flex flex-col">
-      {/* Minimal Top Header */}
-      <header className="border-b border-[#222] bg-[#0d0d0d] px-4 sm:px-8 py-3 flex items-center justify-between">
+
+      {/* ── HEADER ─────────────────────────────────────────────────────── */}
+      <header className="border-b border-[#222] bg-[#0a0a0a] px-4 sm:px-8 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-2.5 h-2.5 bg-white rounded-sm" />
+          <div className="w-2 h-2 bg-white rounded-sm" />
           <span className="font-bold text-white tracking-widest uppercase text-sm">
-            DESK BUGGY // HARDWARE STUDIO
+            DESK BUGGY
           </span>
+          <span className="text-neutral-600 text-[11px]">// HARDWARE STUDIO</span>
         </div>
-        <div className="text-[11px] text-neutral-500">
-          Cloudflare Pages • Web Serial API
+        <div className="flex items-center gap-3 text-[10px] text-neutral-600">
+          <span>Web Serial API</span>
+          <span className="w-px h-3 bg-[#333]" />
+          <span>{FIRMWARE_PRESETS.length} firmware images</span>
         </div>
       </header>
 
-      {/* 1. HERO SECTION */}
-      <section className="border-b border-[#1f1f1f] bg-gradient-to-b from-[#0f0f0f] to-[#070707] px-4 sm:px-8 py-10">
-        <div className="max-w-6xl mx-auto flex flex-col gap-4 text-center sm:text-left">
-          <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start text-[10px] text-neutral-400">
-            <span className="px-2 py-0.5 bg-[#1a1a1a] border border-[#2b2b2b] rounded text-white font-bold">
-              DUAL-MCU SUITE
-            </span>
-            <span>ESP32 & ESP32-C3 SUPERMINI</span>
-            <span>•</span>
-            <span>1:1 PIXEL HARDWARE EMULATOR</span>
-            <span>•</span>
-            <span>IN-BROWSER ROM FLASHER</span>
+      {/* ── HERO ───────────────────────────────────────────────────────── */}
+      <section className="border-b border-[#1a1a1a] px-4 sm:px-8 py-8">
+        <div className="max-w-6xl mx-auto flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-neutral-500">
+            <span className="text-white font-bold tracking-widest uppercase">DUAL-MCU SUITE</span>
+            <span>ESP32 + ST7735 1.8" TFT</span>
+            <span className="text-neutral-700">·</span>
+            <span>ESP32-C3 + SSD1306 0.96" OLED</span>
+            <span className="text-neutral-700">·</span>
+            <span>1:1 pixel emulator</span>
+            <span className="text-neutral-700">·</span>
+            <span>in-browser ROM flasher</span>
           </div>
-
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
-            Smart Desktop Companion & Retro Display Ecosystem
-          </h1>
-
-          <p className="text-neutral-400 text-xs sm:text-sm max-w-3xl leading-relaxed">
-            Select your hardware device below. Click any firmware project to inspect its 1:1 pixel-perfect interactive screen replica and flash the compiled binary directly to your board over Web Serial.
+          <p className="text-neutral-500 text-[11px] max-w-2xl leading-relaxed">
+            Pick a device below. Click any project to open its 1:1 screen replica and flash the binary to your board over Web Serial — no drivers, no IDE.
           </p>
         </div>
       </section>
 
-      {/* 2. TWO DEVICE BOXES (ESP32 TFT vs ESP32-C3 OLED) */}
-      <section className="px-4 sm:px-8 py-8 max-w-6xl mx-auto w-full flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] text-neutral-400 font-bold uppercase tracking-wider">
-            Hardware Platforms: Select Device & Project
-          </span>
-          <span className="text-[10px] text-neutral-600">
-            {FIRMWARE_PRESETS.length} Total Firmware Images
-          </span>
-        </div>
+      {/* ── DEVICE SELECTOR ────────────────────────────────────────────── */}
+      <section className="px-4 sm:px-8 py-6 max-w-6xl mx-auto w-full flex flex-col gap-4">
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-          {/* ======================================================== */}
-          {/* BOX 1: ESP32 + 1.8" ST7735 COLOR TFT                    */}
-          {/* ======================================================== */}
-          <div className="bg-[#0c0c0c] border border-[#222] rounded-lg p-5 flex flex-col justify-between hover:border-[#383838] transition">
-            <div className="flex flex-col gap-3">
-              {/* Box 1 Header */}
-              <div className="flex items-start justify-between border-b border-[#1f1f1f] pb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
-                    <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                      ESP32 + 1.8" ST7735 TFT
-                    </h2>
-                  </div>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">
-                    160×128 • 16-bit RGB565 • SPI 27MHz Bus
-                  </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+
+          {/* BOX 1 — ESP32 TFT */}
+          <div className={`bg-[#0b0b0b] border rounded-lg p-4 flex flex-col gap-3 transition-colors ${
+            selectedPreset?.category === 'tft' ? 'border-red-500/40' : 'border-[#1e1e1e] hover:border-[#2e2e2e]'
+          }`}>
+            {/* Device header */}
+            <div className="flex items-start justify-between pb-3 border-b border-[#191919]">
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                  <h2 className="text-[13px] font-bold text-white uppercase tracking-wider">
+                    ESP32 + ST7735 TFT
+                  </h2>
                 </div>
-                <span className="px-2 py-0.5 bg-[#181818] border border-[#292929] text-[10px] text-neutral-300 rounded font-bold">
-                  {tftPresets.length} Projects
-                </span>
+                <p className="text-[10px] text-neutral-600 pl-4">160×128 · 16-bit RGB565 · SPI</p>
               </div>
-
-              {/* Hardware Pinout Specs */}
-              <div className="p-2 bg-[#121212] border border-[#1c1c1c] rounded text-[10px] text-neutral-400 flex flex-wrap gap-x-3 gap-y-1">
-                <span>MCU: <strong className="text-white">ESP32-WROOM-32</strong></span>
-                <span>Pins: <strong className="text-white">CS:5, DC:2, RST:4, MOSI:23, SCK:18, BL:32</strong></span>
-              </div>
-
-              {/* Project Cards List */}
-              <div className="flex flex-col gap-2 mt-2">
-                {tftPresets.map((preset) => {
-                  const isSelected = selectedPreset?.id === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      onClick={() => handleSelectProject(preset)}
-                      className={`p-3 rounded border text-left transition flex items-center justify-between group ${
-                        isSelected
-                          ? 'bg-[#181818] border-red-500 text-white font-bold'
-                          : 'bg-[#101010] border-[#1e1e1e] hover:border-[#333] text-neutral-300'
-                      }`}
-                    >
-                      <div className="flex flex-col gap-0.5 pr-2">
-                        <span className="text-xs text-white font-medium group-hover:text-red-400 transition">
-                          {preset.title}
-                        </span>
-                        <span className="text-[10px] text-neutral-500">
-                          {preset.subtitle}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] px-1.5 py-0.5 bg-[#161616] border border-[#262626] rounded text-neutral-400 font-mono">
-                          {preset.fps} FPS
-                        </span>
-                        <ArrowRight className={`w-3.5 h-3.5 ${isSelected ? 'text-red-400' : 'text-neutral-600 group-hover:text-white'} transition`} />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <span className="text-[10px] text-neutral-500 tabular-nums">{tftPresets.length} projects</span>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-[#1a1a1a] text-[10px] text-neutral-500 flex justify-between">
-              <span>SPI Hardware Acceleration</span>
-              <span>Double-Buffered GFXcanvas16</span>
+            {/* Pin spec strip */}
+            <div className="text-[10px] text-neutral-600 leading-relaxed">
+              <span className="text-neutral-500">CS:</span>5&nbsp;
+              <span className="text-neutral-500">DC:</span>2&nbsp;
+              <span className="text-neutral-500">RST:</span>4&nbsp;
+              <span className="text-neutral-500">MOSI:</span>23&nbsp;
+              <span className="text-neutral-500">SCK:</span>18&nbsp;
+              <span className="text-neutral-500">BL:</span>32
+            </div>
+
+            {/* Project list */}
+            <div className="flex flex-col gap-1.5">
+              {tftPresets.map((preset) => {
+                const isSelected = selectedPreset?.id === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => handleSelectProject(preset)}
+                    className={`px-3 py-2.5 rounded border text-left flex items-center justify-between group transition-colors ${
+                      isSelected
+                        ? 'bg-[#1a0e0e] border-red-500/60'
+                        : 'bg-[#0e0e0e] border-[#1c1c1c] hover:border-[#2c2c2c]'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-0.5 min-w-0 pr-2">
+                      <span className={`text-[12px] font-medium truncate transition-colors ${
+                        isSelected ? 'text-red-400' : 'text-neutral-200 group-hover:text-white'
+                      }`}>
+                        {preset.title}
+                      </span>
+                      <span className="text-[10px] text-neutral-600 truncate">{preset.subtitle}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[9px] text-neutral-600 tabular-nums">{preset.fps}fps</span>
+                      <ArrowRight className={`w-3 h-3 transition-colors ${
+                        isSelected ? 'text-red-500' : 'text-neutral-700 group-hover:text-neutral-400'
+                      }`} />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* ======================================================== */}
-          {/* BOX 2: ESP32-C3 SUPERMINI + 0.96" SSD1306 OLED          */}
-          {/* ======================================================== */}
-          <div className="bg-[#0c0c0c] border border-[#222] rounded-lg p-5 flex flex-col justify-between hover:border-[#383838] transition">
-            <div className="flex flex-col gap-3">
-              {/* Box 2 Header */}
-              <div className="flex items-start justify-between border-b border-[#1f1f1f] pb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block" />
-                    <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                      ESP32-C3 + 0.96" OLED
-                    </h2>
-                  </div>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">
-                    128×64 • Monochrome • I2C Fast Mode+ (1.0MHz)
-                  </p>
+          {/* BOX 2 — ESP32-C3 OLED */}
+          <div className={`bg-[#0b0b0b] border rounded-lg p-4 flex flex-col gap-3 transition-colors ${
+            selectedPreset?.category === 'oled' ? 'border-cyan-500/40' : 'border-[#1e1e1e] hover:border-[#2e2e2e]'
+          }`}>
+            {/* Device header */}
+            <div className="flex items-start justify-between pb-3 border-b border-[#191919]">
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="w-2 h-2 rounded-full bg-cyan-400 shrink-0" />
+                  <h2 className="text-[13px] font-bold text-white uppercase tracking-wider">
+                    ESP32-C3 + SSD1306 OLED
+                  </h2>
                 </div>
-                <span className="px-2 py-0.5 bg-[#181818] border border-[#292929] text-[10px] text-neutral-300 rounded font-bold">
-                  {oledPresets.length} Projects
-                </span>
+                <p className="text-[10px] text-neutral-600 pl-4">128×64 · Monochrome · I2C</p>
               </div>
-
-              {/* Hardware Pinout Specs */}
-              <div className="p-2 bg-[#121212] border border-[#1c1c1c] rounded text-[10px] text-neutral-400 flex flex-wrap gap-x-3 gap-y-1">
-                <span>MCU: <strong className="text-white">ESP32-C3 SuperMini</strong></span>
-                <span>Pins: <strong className="text-white">SDA: GPIO 8, SCL: GPIO 9 (3.3V/GND)</strong></span>
-              </div>
-
-              {/* Project Cards List */}
-              <div className="flex flex-col gap-2 mt-2">
-                {oledPresets.map((preset) => {
-                  const isSelected = selectedPreset?.id === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      onClick={() => handleSelectProject(preset)}
-                      className={`p-3 rounded border text-left transition flex items-center justify-between group ${
-                        isSelected
-                          ? 'bg-[#181818] border-cyan-400 text-white font-bold'
-                          : 'bg-[#101010] border-[#1e1e1e] hover:border-[#333] text-neutral-300'
-                      }`}
-                    >
-                      <div className="flex flex-col gap-0.5 pr-2">
-                        <span className="text-xs text-white font-medium group-hover:text-cyan-300 transition">
-                          {preset.title}
-                        </span>
-                        <span className="text-[10px] text-neutral-500">
-                          {preset.subtitle}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] px-1.5 py-0.5 bg-[#161616] border border-[#262626] rounded text-neutral-400 font-mono">
-                          {preset.fps} FPS
-                        </span>
-                        <ArrowRight className={`w-3.5 h-3.5 ${isSelected ? 'text-cyan-400' : 'text-neutral-600 group-hover:text-white'} transition`} />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <span className="text-[10px] text-neutral-500 tabular-nums">{oledPresets.length} projects</span>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-[#1a1a1a] text-[10px] text-neutral-500 flex justify-between">
-              <span>I2C 1.0 MHz Fast Mode+</span>
-              <span>Ultra-Low Power ~15mA</span>
+            {/* Pin spec strip */}
+            <div className="text-[10px] text-neutral-600 leading-relaxed">
+              <span className="text-neutral-500">SDA:</span> GPIO 8&nbsp;&nbsp;
+              <span className="text-neutral-500">SCL:</span> GPIO 9&nbsp;&nbsp;
+              <span className="text-neutral-500">VCC:</span> 3.3V&nbsp;&nbsp;
+              <span className="text-neutral-500">GND:</span> GND
+            </div>
+
+            {/* Project list */}
+            <div className="flex flex-col gap-1.5">
+              {oledPresets.map((preset) => {
+                const isSelected = selectedPreset?.id === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => handleSelectProject(preset)}
+                    className={`px-3 py-2.5 rounded border text-left flex items-center justify-between group transition-colors ${
+                      isSelected
+                        ? 'bg-[#071416] border-cyan-500/60'
+                        : 'bg-[#0e0e0e] border-[#1c1c1c] hover:border-[#2c2c2c]'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-0.5 min-w-0 pr-2">
+                      <span className={`text-[12px] font-medium truncate transition-colors ${
+                        isSelected ? 'text-cyan-400' : 'text-neutral-200 group-hover:text-white'
+                      }`}>
+                        {preset.title}
+                      </span>
+                      <span className="text-[10px] text-neutral-600 truncate">{preset.subtitle}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[9px] text-neutral-600 tabular-nums">{preset.fps}fps</span>
+                      <ArrowRight className={`w-3 h-3 transition-colors ${
+                        isSelected ? 'text-cyan-400' : 'text-neutral-700 group-hover:text-neutral-400'
+                      }`} />
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
+
         </div>
       </section>
 
-      {/* 3. WORKBENCH SECTION (REVEALED WHEN A PROJECT IS CLICKED) */}
+      {/* ── WORKBENCH ──────────────────────────────────────────────────── */}
       <div ref={workbenchRef}>
         {selectedPreset ? (
-          <section className="border-t border-[#222] bg-[#090909] px-4 sm:px-8 py-8">
+          <section className="border-t border-[#1e1e1e] bg-[#080808] px-4 sm:px-8 py-6">
             <div className="max-w-6xl mx-auto flex flex-col gap-5">
-              {/* Active Project Banner */}
-              <div className="flex flex-wrap items-center justify-between p-3.5 bg-[#111] border border-[#262626] rounded-lg gap-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-3 h-3 rounded-full"
+
+              {/* Active target bar */}
+              <div className="flex items-center justify-between px-3 py-2 bg-[#0f0f0f] border border-[#242424] rounded">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: selectedPreset.category === 'tft' ? '#ef4444' : '#06b6d4' }}
                   />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-neutral-500 uppercase tracking-widest">
-                        ACTIVE TARGET
-                      </span>
-                      <span className="text-xs font-bold text-white">
-                        {selectedPreset.title}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-neutral-400">
-                      {selectedPreset.display} • Chip: {selectedPreset.chip} • {selectedPreset.fps} FPS Target
-                    </p>
-                  </div>
+                  <span className="text-[10px] text-neutral-500 uppercase tracking-widest shrink-0">TARGET</span>
+                  <span className="text-[12px] font-bold text-white truncate">{selectedPreset.title}</span>
+                  <span className="text-[10px] text-neutral-600 shrink-0 hidden sm:inline">
+                    {selectedPreset.chip} · {selectedPreset.display} · {selectedPreset.fps}fps
+                  </span>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="px-2.5 py-1 bg-[#1a1a1a] hover:bg-[#252525] border border-[#333] text-neutral-300 rounded text-[11px]"
-                  >
-                    Change Project ↑
-                  </button>
-                  <button
-                    onClick={() => setSelectedPreset(null)}
-                    className="p-1 text-neutral-500 hover:text-white rounded"
-                    title="Close Workbench"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setSelectedPreset(null)}
+                  className="ml-3 p-1 text-neutral-600 hover:text-neutral-200 rounded transition-colors shrink-0"
+                  title="Close workbench"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              {/* Split View: 1:1 Screen Replica on Left, Web Serial Flasher on Right */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                {/* 1:1 Screen Replica Simulator */}
+              {/* Simulator + Flasher side-by-side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
                 <div className="flex flex-col gap-2">
-                  <div className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold">
-                    1:1 Pixel-Perfect Interactive Screen
-                  </div>
+                  <div className="text-[10px] text-neutral-600 uppercase tracking-wider">1:1 Screen</div>
                   <HardwareScreenSimulator preset={selectedPreset} />
                 </div>
-
-                {/* Web Serial Hardware Flasher */}
                 <div className="flex flex-col gap-2">
-                  <div className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold">
-                    Web Serial Hardware Flasher & Terminal
-                  </div>
+                  <div className="text-[10px] text-neutral-600 uppercase tracking-wider">Flasher / Terminal</div>
                   <WebHardwareFlasher preset={selectedPreset} />
                 </div>
               </div>
 
-              {/* Hardware Pinouts Matrix */}
-              <div className="mt-4">
-                <div className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold mb-2">
-                  Wiring Pinout Reference for {selectedPreset.chip}
+              {/* Pinouts */}
+              <div className="flex flex-col gap-2">
+                <div className="text-[10px] text-neutral-600 uppercase tracking-wider">
+                  Pinout — {selectedPreset.chip}
                 </div>
                 <HardwarePinouts />
               </div>
+
             </div>
           </section>
         ) : (
-          <div className="border-t border-[#1a1a1a] bg-[#090909] py-8 text-center text-neutral-500 text-xs">
-            ▲ Click any project in the boxes above to launch the 1:1 screen replica and firmware flasher.
+          <div className="border-t border-[#141414] py-6 text-center text-[11px] text-neutral-700">
+            ↑ click a project to open workbench
           </div>
         )}
       </div>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-[#1a1a1a] px-4 sm:px-8 py-3 bg-[#080808] text-[10px] text-neutral-600 flex justify-between">
-        <span>Cloudflare Pages Static Deployment Ready</span>
-        <span>ESP32 (ST7735 TFT) & ESP32-C3 (SSD1306 OLED)</span>
+      {/* ── FOOTER ─────────────────────────────────────────────────────── */}
+      <footer className="mt-auto border-t border-[#141414] px-4 sm:px-8 py-2.5 bg-[#070707] text-[10px] text-neutral-700 flex justify-between">
+        <span>desk-buggy · joyboy-pega/desk-buggy</span>
+        <span>ESP32 ST7735 · ESP32-C3 SSD1306</span>
       </footer>
+
     </main>
   );
 }
