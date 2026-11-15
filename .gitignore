@@ -2,8 +2,14 @@
 .pio/
 **/.pio/
 *.bin
+!web/public/firmware/**/*.bin
 *.elf
 *.hex
+
+# Web App
+web/node_modules/
+web/.next/
+web/out/
 
 # IDEs & Editors
 .vscode/
