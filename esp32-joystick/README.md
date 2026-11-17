@@ -1,6 +1,18 @@
 # ESP32 Dual-Axis Joystick Controller & Telemetry Studio
 
-Live hardware telemetry studio and Web Serial visualizer for analog thumb joystick (KY-023 / PS2 module) connected to an ESP32-WROOM-32.
+Live hardware telemetry studio, Web Serial visualizer, and Bluetooth LE wireless mouse for analog thumb joystick (KY-023 / PS2 / R103 module) connected to an ESP32-WROOM-32.
+
+---
+
+## 🖱️ Standalone Bluetooth LE Mouse for macOS
+
+The firmware turns the ESP32 into a native wireless Bluetooth mouse for your MacBook without requiring any external screens:
+- **Advertising Name**: `MacBook Joystick Mouse`
+- **Move Joystick**: Smooth cursor motion with non-linear acceleration.
+- **Single Click**: Left click.
+- **Hold Down (>320ms)**: Click-and-drag windows/text.
+- **Double Click (<260ms)**: Right click context menu.
+- **Blue LED (GPIO 2)**: Blinks while pairing, solid ON when connected.
 
 ---
 
