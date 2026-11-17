@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 
 export const HardwarePinouts: React.FC = () => {
-  const [boardType, setBoardType] = useState<'esp32-tft' | 'esp32c3-oled'>('esp32-tft');
+  const [boardType, setBoardType] = useState<'esp32-tft' | 'esp32c3-oled' | 'esp32-joystick'>('esp32-joystick');
 
   return (
     <div className="flex flex-col w-full bg-[#0d0d0d] border border-[#222] rounded-lg font-mono text-xs">
@@ -11,6 +11,14 @@ export const HardwarePinouts: React.FC = () => {
         <span className="text-white font-bold">HARDWARE WIRING MATRIX</span>
 
         <div className="flex items-center bg-[#1a1a1a] border border-[#333] rounded">
+          <button
+            onClick={() => setBoardType('esp32-joystick')}
+            className={`px-2.5 py-1 text-[11px] rounded ${
+              boardType === 'esp32-joystick' ? 'bg-[#00f0ff] text-black font-bold' : 'text-neutral-400 hover:text-white'
+            }`}
+          >
+            🕹️ ESP32 + Joystick
+          </button>
           <button
             onClick={() => setBoardType('esp32-tft')}
             className={`px-2.5 py-1 text-[11px] rounded ${
@@ -31,7 +39,50 @@ export const HardwarePinouts: React.FC = () => {
       </div>
 
       <div className="p-3">
-        {boardType === 'esp32-tft' ? (
+        {boardType === 'esp32-joystick' ? (
+          <table className="w-full text-left text-[11px] border border-[#222]">
+            <thead className="bg-[#141414] text-neutral-400 border-b border-[#222]">
+              <tr>
+                <th className="p-2 text-[#00f0ff]">Joystick Module Pin</th>
+                <th className="p-2 text-white">ESP32 Pin</th>
+                <th className="p-2">Signal Type</th>
+                <th className="p-2">Function & Notes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#1c1c1c] bg-[#0c0c0c] text-neutral-300">
+              <tr>
+                <td className="p-2 font-bold text-[#00f0ff]">VRx (X-Axis)</td>
+                <td className="p-2 font-bold text-white">GPIO 34</td>
+                <td className="p-2 text-amber-400">Analog (ADC1_CH6)</td>
+                <td className="p-2 text-neutral-400">12-bit ADC (0 - 4095), center ~2048. Wi-Fi safe (ADC1)</td>
+              </tr>
+              <tr>
+                <td className="p-2 font-bold text-[#00f0ff]">VRy (Y-Axis)</td>
+                <td className="p-2 font-bold text-white">GPIO 35</td>
+                <td className="p-2 text-amber-400">Analog (ADC1_CH7)</td>
+                <td className="p-2 text-neutral-400">12-bit ADC (0 - 4095), center ~2048. Wi-Fi safe (ADC1)</td>
+              </tr>
+              <tr>
+                <td className="p-2 font-bold text-pink-400">SW (Push Button)</td>
+                <td className="p-2 font-bold text-white">GPIO 25</td>
+                <td className="p-2 text-green-400">Digital (INPUT_PULLUP)</td>
+                <td className="p-2 text-neutral-400">Active LOW: Pressed = 0, Released = 1. Internal pullup enabled</td>
+              </tr>
+              <tr>
+                <td className="p-2 font-bold text-white">+5V / VCC</td>
+                <td className="p-2 font-bold text-white">3.3V</td>
+                <td className="p-2 text-red-400">Power</td>
+                <td className="p-2 text-neutral-400">Power from 3.3V rail to protect ESP32 3.3V ADC limit</td>
+              </tr>
+              <tr>
+                <td className="p-2 font-bold text-white">GND</td>
+                <td className="p-2 font-bold text-white">GND</td>
+                <td className="p-2 text-blue-400">Ground</td>
+                <td className="p-2 text-neutral-400">Common system ground</td>
+              </tr>
+            </tbody>
+          </table>
+        ) : boardType === 'esp32-tft' ? (
           <table className="w-full text-left text-[11px] border border-[#222]">
             <thead className="bg-[#141414] text-neutral-400 border-b border-[#222]">
               <tr>
