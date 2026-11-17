@@ -22,6 +22,28 @@ export interface FirmwarePreset {
 
 export const FIRMWARE_PRESETS: FirmwarePreset[] = [
   {
+    id: 'esp32-joystick',
+    title: 'Dual-Axis Joystick Controller',
+    subtitle: 'VRx/VRy + Pushbutton • 50 Hz Live Stream',
+    category: 'tft',
+    chip: 'ESP32',
+    display: 'ST7735 TFT (160x128)',
+    width: 160,
+    height: 128,
+    fps: 50,
+    badgeColor: '#00f0ff',
+    description: 'Real-time telemetry controller for analog thumb joystick (GPIO 34/35) & pushbutton (GPIO 25). Streams 50Hz JSON over USB Serial and hosts Wi-Fi web server.',
+    commands: [
+      { key: 'c', label: 'Calibrate Center', action: 'c' },
+      { key: '?', label: 'Help / Status', action: '?' },
+    ],
+    files: [
+      { name: 'bootloader.bin', url: '/firmware/esp32-joystick/bootloader.bin', offset: 0x1000 },
+      { name: 'partitions.bin', url: '/firmware/esp32-joystick/partitions.bin', offset: 0x8000 },
+      { name: 'firmware.bin', url: '/firmware/esp32-joystick/firmware.bin', offset: 0x10000 },
+    ],
+  },
+  {
     id: 'esp32-nothing-hud',
     title: 'Nothing OS Telemetry HUD v2',
     subtitle: '1.8" Color TFT • Dot-Matrix & IST Time',
