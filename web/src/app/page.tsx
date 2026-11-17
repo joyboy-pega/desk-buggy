@@ -66,6 +66,14 @@ export default function HomePage() {
           <span className="text-neutral-600 text-[11px]">// HARDWARE STUDIO</span>
         </div>
         <div className="flex items-center gap-3 text-[10px] text-neutral-600">
+          <a
+            href="/joystick.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#00f0ff]/10 border border-[#00f0ff]/40 text-[#00f0ff] hover:bg-[#00f0ff]/20 transition-colors font-bold tracking-wider"
+          >
+            🕹️ LIVE JOYSTICK STUDIO
+          </a>
           <span>Web Serial API</span>
           <span className="w-px h-3 bg-[#333]" />
           <span>{FIRMWARE_PRESETS.length} firmware images</span>
