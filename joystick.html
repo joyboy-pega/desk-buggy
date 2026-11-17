@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Dual-Axis Joystick Studio & Telemetry</title>
+  <style>
+    :root {
+      --bg: #07080c;
+      --card: #0e111a;
+      --card-inner: #141824;
+      --border: #1e2436;
+      --border-bright: #2d3650;
+      --cyan: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.35);
+      --magenta: #ff007f;
+      --magenta-glow: rgba(255, 0, 127, 0.4);
+      --green: #00ff88;
+      --orange: #ffaa00;
+      --text: #f0f4f8;
+      --dim: #738096;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "SF Mono", monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: #090b12;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--cyan), var(--magenta));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px var(--cyan-glow);
+    }
+
+    .brand h1 {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #fff;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--dim);
+      font-weight: 500;
+    }
+
+    .conn-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: var(--card-inner);
+      color: #fff;
+      border: 1px solid var(--border-bright);
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      background: #1c2233;
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+    }
+
+    .btn-primary {
+      background: #003747;
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    .btn-primary:hover {
+      background: var(--cyan);
+      color: #000;
+      box-shadow: 0 0 16px var(--cyan-glow);
+    }
+
+    .btn-danger {
+      background: #380d1e;
+      border-color: var(--magenta);
+      color: var(--magenta);
+    }
+
+    .btn-danger:hover {
+      background: var(--magenta);
+      color: #fff;
+      box-shadow: 0 0 16px var(--magenta-glow);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #101420;
+      border: 1px solid var(--border);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #555;
+    }
+
+    .status-dot.active {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.2); }
+    }
+
+    /* ── WIRING BANNER ── */
+    .wiring-strip {
+      background: #0b0e18;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 24px;
+      font-size: 11px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      color: var(--dim);
+    }
+
+    .pin-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .pin-pill strong {
+      color: var(--text);
+    }
+
+    .pin-tag {
+      background: #171d2c;
+      border: 1px solid var(--border-bright);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--cyan);
+      font-family: monospace;
+      font-size: 10px;
+    }
+
+    /* ── MAIN WORKSPACE ── */
+    .workspace {
+      flex: 1;
+      padding: 24px;
+      max-width: 1380px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 960px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    }
+
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--dim);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ── JOYSTICK GIMBAL ── */
+    .joy-bezel {
+      position: relative;
+      width: 320px;
+      height: 320px;
+      margin: 0 auto;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, #131724 0%, #0a0c14 100%);
+      border: 3px solid var(--border-bright);
+      box-shadow: inset 0 0 30px #000, 0 0 25px rgba(0, 240, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: crosshair;
+      user-select: none;
+    }
+
+    canvas#joyCanvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+
+    /* ── SW BUTTON WIDGET ── */
+    .sw-widget {
+      background: #090c14;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+    }
+
+    .sw-widget.pressed {
+      border-color: var(--magenta);
+      background: rgba(255, 0, 127, 0.15);
+      box-shadow: 0 0 20px var(--magenta-glow);
+    }
+
+    .sw-title {
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .sw-pill {
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: #171d2b;
+      color: var(--dim);
+      transition: all 0.15s ease;
+    }
+
+    .sw-widget.pressed .sw-pill {
+      background: var(--magenta);
+      color: #fff;
+      box-shadow: 0 0 12px var(--magenta);
+    }
+
+    /* ── TELEMETRY GAUGES ── */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .gauge-box {
+      background: #090c14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .gauge-label {
+      font-size: 10px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .gauge-val {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      font-family: monospace;
+    }
+
+    .gauge-sub {
+      font-size: 11px;
+      color: var(--cyan);
+      font-family: monospace;
+    }
+
+    /* ── RIGHT COLUMN: ARENA & OSCILLOSCOPE ── */
+    .arena-card {
+      position: relative;
+    }
+
+    canvas#arenaCanvas {
+      width: 100%;
+      height: 260px;
+      background: #080a11;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: block;
+    }
+
+    canvas#scopeCanvas {
+      width: 100%;
+      height: 140px;
+      background: #080a11;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: block;
+    }
+
+    /* ── CONTROLS & SETTINGS ── */
+    .settings-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .toggle-label {
+      font-size: 11px;
+      color: var(--dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .toggle-label input {
+      accent-color: var(--cyan);
+      cursor: pointer;
+    }
+
+    /* ── TERMINAL LOG ── */
+    .terminal-box {
+      background: #050609;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #79869c;
+      height: 80px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .terminal-box .cyan { color: var(--cyan); }
+    .terminal-box .green { color: var(--green); }
+    .terminal-box .magenta { color: var(--magenta); }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🕹️</div>
+      <div>
+        <h1>ESP32 JOYSTICK STUDIO</h1>
+        <div class="brand-sub">Real-Time Dual-Axis & Pushbutton Telemetry</div>
+      </div>
+    </div>
+
+    <div class="conn-bar">
+      <div class="status-badge">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">DISCONNECTED</span>
+      </div>
+
+      <div class="status-badge" id="rateBadge" style="display:none; color:var(--cyan); font-weight:bold;">
+        0 Hz
+      </div>
+
+      <!-- Mouse Mode Button -->
+      <button class="btn btn-primary" id="btnMouseMode" onclick="toggleMouseMode()">
+        🐭 Mouse: ON
+      </button>
+
+      <!-- USB Serial Connect -->
+      <button class="btn btn-primary" id="btnConnectSerial" onclick="toggleSerial()">
+        🔌 Connect USB (Web Serial)
+      </button>
+
+      <!-- WiFi Connect Prompt -->
+      <button class="btn" id="btnConnectWifi" onclick="promptWifi()">
+        📡 Connect Wi-Fi
+      </button>
+
+      <!-- Simulator Mode -->
+      <button class="btn" id="btnSim" onclick="toggleSimulator()">
+        🎮 Simulator: OFF
+      </button>
+    </div>
+  </header>
+
+  <!-- PIN WIRING BANNER -->
+  <div class="wiring-strip">
+    <div class="pin-pill">
+      <span>Power:</span>
+      <span class="pin-tag">VCC → 3.3V</span>
+      <span class="pin-tag">GND → GND</span>
+    </div>
+    <div class="pin-pill">
+      <span>X-Axis (VRx):</span>
+      <span class="pin-tag">GPIO 34</span>
+      <span style="font-size:10px;">(ADC1_CH6)</span>
+    </div>
+    <div class="pin-pill">
+      <span>Y-Axis (VRy):</span>
+      <span class="pin-tag">GPIO 35</span>
+      <span style="font-size:10px;">(ADC1_CH7)</span>
+    </div>
+    <div class="pin-pill">
+      <span>Switch (SW):</span>
+      <span class="pin-tag">GPIO 25</span>
+      <span style="font-size:10px;">(PULLUP)</span>
+    </div>
+    <div class="pin-pill" style="margin-left:auto;">
+      <span>Baud Rate: <strong>115200</strong></span>
+    </div>
+  </div>
+
+  <!-- WORKSPACE -->
+  <div class="workspace">
+
+    <!-- LEFT COLUMN: JOYSTICK GIMBAL & TELEMETRY -->
+    <div class="card">
+      <div class="card-title">
+        <span>Joystick Gimbal</span>
+        <span id="cardDirBadge" style="color:var(--cyan); font-family:monospace; font-weight:bold;">CENTER</span>
+      </div>
+
+      <!-- Mouse Help Banner -->
+      <div id="mouseBadge" style="font-size:11px; padding:6px 10px; border-radius:6px; background:rgba(0, 240, 255, 0.1); border:1px solid rgba(0, 240, 255, 0.25); color:var(--cyan); text-align:center;">
+        🐭 <strong>Mouse Mode ON</strong>: Move cursor over circle to steer stick • Click to push button
+      </div>
+
+      <!-- 3D/2D Joystick Canvas -->
+      <div class="joy-bezel" id="joyBezel">
+        <canvas id="joyCanvas" width="320" height="320"></canvas>
+      </div>
+
+      <!-- SW Button Indicator -->
+      <div class="sw-widget" id="swWidget">
+        <div>
+          <div class="sw-title">SW PUSH BUTTON</div>
+          <div style="font-size:10px; color:var(--dim);">GPIO 25 • ACTIVE LOW</div>
+        </div>
+        <div class="sw-pill" id="swPill">RELEASED</div>
+      </div>
+
+      <!-- Telemetry Gauges -->
+      <div class="telemetry-grid">
+        <div class="gauge-box">
+          <div class="gauge-label">X-Axis (VRx)</div>
+          <div class="gauge-val" id="valNormX">0.00</div>
+          <div class="gauge-sub" id="subX">RAW: 2048 • 1.65V</div>
+        </div>
+
+        <div class="gauge-box">
+          <div class="gauge-label">Y-Axis (VRy)</div>
+          <div class="gauge-val" id="valNormY">0.00</div>
+          <div class="gauge-sub" id="subY">RAW: 2048 • 1.65V</div>
+        </div>
+
+        <div class="gauge-box">
+          <div class="gauge-label">Polar Vector</div>
+          <div class="gauge-val" id="valMag">0%</div>
+          <div class="gauge-sub" id="valAngle">0.0° DEG</div>
+        </div>
+
+        <div class="gauge-box">
+          <div class="gauge-label">Button Clicks</div>
+          <div class="gauge-val" id="valClicks">0</div>
+          <div class="gauge-sub" id="valHold">0.0s HELD</div>
+        </div>
+      </div>
+
+      <!-- Settings & Calibration -->
+      <div class="settings-row">
+        <label class="toggle-label">
+          <input type="checkbox" id="chkInvertX"> Invert X
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="chkInvertY"> Invert Y
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="chkSwapXY"> Swap Axes
+        </label>
+        <button class="btn" style="margin-left:auto; padding:4px 8px; font-size:11px;" onclick="calibrateCenter()">
+          🎯 Zero Center
+        </button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: DESK BUGGY ARENA & OSCILLOSCOPE -->
+    <div class="card arena-card">
+      <div class="card-title">
+        <span>🎮 Desk Buggy RC Playground</span>
+        <span style="font-size:11px; color:var(--dim);">DRIVE WITH PHYSICAL JOYSTICK</span>
+      </div>
+
+      <!-- Interactive Buggy Canvas -->
+      <canvas id="arenaCanvas" width="700" height="260"></canvas>
+
+      <!-- Live Oscilloscope -->
+      <div class="card-title" style="margin-top:4px;">
+        <span>📈 Real-Time Dual-Channel Oscilloscope</span>
+        <span style="font-size:11px;">
+          <span style="color:var(--cyan);">■ VRx</span> &nbsp;
+          <span style="color:var(--orange);">■ VRy</span>
+        </span>
+      </div>
+      <canvas id="scopeCanvas" width="700" height="140"></canvas>
+
+      <!-- Serial Monitor Log -->
+      <div class="card-title" style="margin-top:4px;">
+        <span>Console Stream</span>
+        <span style="font-size:10px; cursor:pointer;" onclick="clearLog()">Clear</span>
+      </div>
+      <div class="terminal-box" id="termLog">ESP32 Joystick Visualizer Initialized. Connect USB or Wi-Fi to begin streaming.</div>
+    </div>
+
+  </div>
+
+  <script>
+    // Audio synthesizer for click sound
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playClickSound(freq = 600) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.06);
+    }
+
+    // State Variables
+    let serialPort = null;
+    let serialReader = null;
+    let isConnected = false;
+    let isSimulator = false;
+    let wifiPollInterval = null;
+    let wifiHost = '';
+
+    let centerX = 2048;
+    let centerY = 2048;
+    let clickCount = 0;
+    let pressStartTime = 0;
+    let wasPressed = false;
+
+    // Live Telemetry Object
+    const joyState = {
+      rawX: 2048,
+      rawY: 2048,
+      normX: 0.0,
+      normY: 0.0,
+      vX: 1.65,
+      vY: 1.65,
+      btn: 0,
+      mag: 0.0,
+      deg: 0.0,
+      dir: 'CENTER'
+    };
+
+    // FPS / Hz Tracker
+    let packetCount = 0;
+    let lastHzCalc = performance.now();
+    let liveHz = 0;
+
+    // Oscilloscope Ring Buffers
+    const SCOPE_POINTS = 200;
+    const scopeX = new Float32Array(SCOPE_POINTS).fill(0);
+    const scopeY = new Float32Array(SCOPE_POINTS).fill(0);
+
+    // ── CANVASES ──
+    const joyCanvas = document.getElementById('joyCanvas');
+    const joyCtx = joyCanvas.getContext('2d');
+    const scopeCanvas = document.getElementById('scopeCanvas');
+    const scopeCtx = scopeCanvas.getContext('2d');
+    const arenaCanvas = document.getElementById('arenaCanvas');
+    const arenaCtx = arenaCanvas.getContext('2d');
+
+    // ── JOYSTICK RENDERING ──
+    function drawJoystickGimbal() {
+      const W = joyCanvas.width;
+      const H = joyCanvas.height;
+      const R = W / 2;
+      const MAX_TRAVEL = R - 40;
+
+      joyCtx.clearRect(0, 0, W, H);
+
+      // Outer Bezel Rim
+      const rimGrad = joyCtx.createRadialGradient(R, R, R - 15, R, R, R);
+      rimGrad.addColorStop(0, '#101420');
+      rimGrad.addColorStop(0.7, '#1e2436');
+      rimGrad.addColorStop(1, '#090b12');
+      joyCtx.beginPath();
+      joyCtx.arc(R, R, R - 2, 0, Math.PI * 2);
+      joyCtx.fillStyle = rimGrad;
+      joyCtx.fill();
+      joyCtx.strokeStyle = '#2d3650';
+      joyCtx.lineWidth = 2;
+      joyCtx.stroke();
+
+      // Inner Dish
+      const dishGrad = joyCtx.createRadialGradient(R, R, 0, R, R, MAX_TRAVEL);
+      dishGrad.addColorStop(0, '#121624');
+      dishGrad.addColorStop(0.85, '#0a0c14');
+      dishGrad.addColorStop(1, '#040508');
+      joyCtx.beginPath();
+      joyCtx.arc(R, R, MAX_TRAVEL, 0, Math.PI * 2);
+      joyCtx.fillStyle = dishGrad;
+      joyCtx.fill();
+
+      // Range Rings (25%, 50%, 75%, 100%)
+      joyCtx.lineWidth = 1;
+      [0.25, 0.50, 0.75, 1.0].forEach(ratio => {
+        joyCtx.beginPath();
+        joyCtx.arc(R, R, MAX_TRAVEL * ratio, 0, Math.PI * 2);
+        joyCtx.strokeStyle = ratio === 1.0 ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255, 255, 255, 0.05)';
+        joyCtx.setLineDash(ratio === 1.0 ? [] : [3, 4]);
+        joyCtx.stroke();
+      });
+      joyCtx.setLineDash([]);
+
+      // Crosshairs
+      joyCtx.strokeStyle = 'rgba(255,255,255,0.08)';
+      joyCtx.beginPath();
+      joyCtx.moveTo(R, R - MAX_TRAVEL); joyCtx.lineTo(R, R + MAX_TRAVEL);
+      joyCtx.moveTo(R - MAX_TRAVEL, R); joyCtx.lineTo(R + MAX_TRAVEL, R);
+      joyCtx.stroke();
+
+      // Degree Markers
+      joyCtx.fillStyle = '#4a556d';
+      joyCtx.font = '9px monospace';
+      joyCtx.textAlign = 'center';
+      joyCtx.textBaseline = 'middle';
+      joyCtx.fillText('UP (N)', R, R - MAX_TRAVEL + 14);
+      joyCtx.fillText('DOWN (S)', R, R + MAX_TRAVEL - 14);
+      joyCtx.fillText('W', R - MAX_TRAVEL + 16, R);
+      joyCtx.fillText('E', R + MAX_TRAVEL - 16, R);
+
+      // Compute Stick Position
+      let normX = joyState.normX;
+      let normY = joyState.normY;
+
+      if (document.getElementById('chkSwapXY').checked) {
+        const tmp = normX; normX = normY; normY = tmp;
+      }
+      if (document.getElementById('chkInvertX').checked) normX = -normX;
+      if (document.getElementById('chkInvertY').checked) normY = -normY;
+
+      const stickX = R + (normX * MAX_TRAVEL);
+      const stickY = R + (normY * MAX_TRAVEL);
+
+      // Shaft Connection
+      const shaftGrad = joyCtx.createLinearGradient(R, R, stickX, stickY);
+      shaftGrad.addColorStop(0, 'rgba(0, 240, 255, 0.15)');
+      shaftGrad.addColorStop(1, joyState.btn ? 'rgba(255, 0, 127, 0.8)' : 'rgba(0, 240, 255, 0.8)');
+      joyCtx.strokeStyle = shaftGrad;
+      joyCtx.lineWidth = 5;
+      joyCtx.lineCap = 'round';
+      joyCtx.beginPath();
+      joyCtx.moveTo(R, R);
+      joyCtx.lineTo(stickX, stickY);
+      joyCtx.stroke();
+
+      // Shadow
+      joyCtx.beginPath();
+      joyCtx.arc(stickX + 5, stickY + 8, 30, 0, Math.PI * 2);
+      joyCtx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      joyCtx.fill();
+
+      // Thumbstick Cap (3D lighting tilt effect)
+      const capGrad = joyCtx.createRadialGradient(
+        stickX - (normX * 8) - 4, stickY - (normY * 8) - 4, 3,
+        stickX, stickY, 32
+      );
+      if (joyState.btn) {
+        capGrad.addColorStop(0, '#ff4da6');
+        capGrad.addColorStop(0.6, '#cc0066');
+        capGrad.addColorStop(1, '#4d0026');
+      } else {
+        capGrad.addColorStop(0, '#4e5670');
+        capGrad.addColorStop(0.6, '#202433');
+        capGrad.addColorStop(1, '#11131c');
+      }
+
+      joyCtx.beginPath();
+      joyCtx.arc(stickX, stickY, 32, 0, Math.PI * 2);
+      joyCtx.fillStyle = capGrad;
+      joyCtx.fill();
+      joyCtx.lineWidth = 2.5;
+      joyCtx.strokeStyle = joyState.btn ? 'var(--magenta)' : 'var(--cyan)';
+      joyCtx.stroke();
+
+      // Thumb Indentation
+      joyCtx.beginPath();
+      joyCtx.arc(stickX, stickY, 18, 0, Math.PI * 2);
+      joyCtx.fillStyle = joyState.btn ? 'rgba(255,0,127,0.35)' : 'rgba(0, 240, 255, 0.12)';
+      joyCtx.fill();
+      joyCtx.strokeStyle = joyState.btn ? '#ff80bf' : 'rgba(0, 240, 255, 0.4)';
+      joyCtx.lineWidth = 1.5;
+      joyCtx.stroke();
+
+      // Knurled Grip Center Dots
+      joyCtx.fillStyle = '#ffffff';
+      [[-5, 0], [5, 0], [0, -5], [0, 5], [0, 0]].forEach(([dx, dy]) => {
+        joyCtx.beginPath();
+        joyCtx.arc(stickX + dx, stickY + dy, 1.2, 0, Math.PI * 2);
+        joyCtx.fill();
+      });
+    }
+
+    // ── OSCILLOSCOPE RENDERING ──
+    function drawScope() {
+      const W = scopeCanvas.width;
+      const H = scopeCanvas.height;
+      const mid = H / 2;
+
+      scopeCtx.fillStyle = '#080a11';
+      scopeCtx.fillRect(0, 0, W, H);
+
+      // Grid Lines
+      scopeCtx.strokeStyle = 'rgba(255,255,255,0.05)';
+      scopeCtx.lineWidth = 1;
+      for (let y = 20; y < H; y += 20) {
+        scopeCtx.beginPath();
+        scopeCtx.moveTo(0, y);
+        scopeCtx.lineTo(W, y);
+        scopeCtx.stroke();
+      }
+      for (let x = 40; x < W; x += 40) {
+        scopeCtx.beginPath();
+        scopeCtx.moveTo(x, 0);
+        scopeCtx.lineTo(x, H);
+        scopeCtx.stroke();
+      }
+
+      // Center Reference Line
+      scopeCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+      scopeCtx.setLineDash([4, 4]);
+      scopeCtx.beginPath();
+      scopeCtx.moveTo(0, mid); scopeCtx.lineTo(W, mid);
+      scopeCtx.stroke();
+      scopeCtx.setLineDash([]);
+
+      // Draw Trace Function
+      function drawTrace(arr, color) {
+        scopeCtx.strokeStyle = color;
+        scopeCtx.lineWidth = 2;
+        scopeCtx.beginPath();
+        for (let i = 0; i < SCOPE_POINTS; i++) {
+          const x = (i / (SCOPE_POINTS - 1)) * W;
+          const y = mid - (arr[i] * (mid - 15));
+          if (i === 0) scopeCtx.moveTo(x, y);
+          else scopeCtx.lineTo(x, y);
+        }
+        scopeCtx.stroke();
+      }
+
+      drawTrace(scopeX, '#00f0ff');
+      drawTrace(scopeY, '#ffaa00');
+    }
+
+    // ── DESK BUGGY PLAYGROUND ARENA ──
+    const buggy = {
+      x: 350,
+      y: 130,
+      angle: 0,
+      speed: 0,
+      boost: 1,
+      trail: []
+    };
+
+    function updateBuggy() {
+      let steer = joyState.normX;
+      let throttle = -joyState.normY; // Push forward (normY < 0) = forward throttle
+
+      if (document.getElementById('chkInvertX').checked) steer = -steer;
+      if (document.getElementById('chkInvertY').checked) throttle = -throttle;
+
+      // Deadband
+      if (Math.abs(steer) < 0.05) steer = 0;
+      if (Math.abs(throttle) < 0.05) throttle = 0;
+
+      // SW button = Turbo Nitro Boost!
+      buggy.boost = joyState.btn ? 2.2 : 1.0;
+
+      // Turning physics
+      buggy.angle += steer * 0.07 * (buggy.speed !== 0 ? Math.sign(buggy.speed) : 0);
+
+      // Acceleration / friction
+      const targetSpeed = throttle * 4.5 * buggy.boost;
+      buggy.speed += (targetSpeed - buggy.speed) * 0.15;
+
+      buggy.x += Math.cos(buggy.angle) * buggy.speed;
+      buggy.y += Math.sin(buggy.angle) * buggy.speed;
+
+      // Wrap around arena borders
+      if (buggy.x < 15) buggy.x = arenaCanvas.width - 15;
+      if (buggy.x > arenaCanvas.width - 15) buggy.x = 15;
+      if (buggy.y < 15) buggy.y = arenaCanvas.height - 15;
+      if (buggy.y > arenaCanvas.height - 15) buggy.y = 15;
+
+      // Record tire skid trail
+      if (Math.abs(buggy.speed) > 0.5) {
+        buggy.trail.push({ x: buggy.x, y: buggy.y, a: 0.5 });
+        if (buggy.trail.length > 80) buggy.trail.shift();
+      }
+    }
+
+    function drawArena() {
+      const W = arenaCanvas.width;
+      const H = arenaCanvas.height;
+
+      arenaCtx.fillStyle = '#080a11';
+      arenaCtx.fillRect(0, 0, W, H);
+
+      // Arena Grid
+      arenaCtx.strokeStyle = 'rgba(255,255,255,0.03)';
+      arenaCtx.lineWidth = 1;
+      for (let x = 0; x < W; x += 30) {
+        arenaCtx.beginPath(); arenaCtx.moveTo(x, 0); arenaCtx.lineTo(x, H); arenaCtx.stroke();
+      }
+      for (let y = 0; y < H; y += 30) {
+        arenaCtx.beginPath(); arenaCtx.moveTo(0, y); arenaCtx.lineTo(W, y); arenaCtx.stroke();
+      }
+
+      // Draw Skidmarks
+      buggy.trail.forEach((p, idx) => {
+        p.a -= 0.005;
+        if (p.a > 0) {
+          arenaCtx.fillStyle = `rgba(0, 240, 255, ${p.a * 0.25})`;
+          arenaCtx.beginPath();
+          arenaCtx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+          arenaCtx.fill();
+        }
+      });
+
+      // Draw Buggy
+      arenaCtx.save();
+      arenaCtx.translate(buggy.x, buggy.y);
+      arenaCtx.rotate(buggy.angle);
+
+      // Headlight Beams
+      const beamGrad = arenaCtx.createRadialGradient(25, 0, 5, 70, 0, 50);
+      beamGrad.addColorStop(0, joyState.btn ? 'rgba(255, 0, 127, 0.4)' : 'rgba(0, 240, 255, 0.3)');
+      beamGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      arenaCtx.fillStyle = beamGrad;
+      arenaCtx.beginPath();
+      arenaCtx.moveTo(15, -10);
+      arenaCtx.lineTo(85, -35);
+      arenaCtx.lineTo(85, 35);
+      arenaCtx.lineTo(15, 10);
+      arenaCtx.closePath();
+      arenaCtx.fill();
+
+      // Buggy Chassis
+      arenaCtx.fillStyle = joyState.btn ? '#ff007f' : '#00f0ff';
+      arenaCtx.shadowColor = joyState.btn ? '#ff007f' : '#00f0ff';
+      arenaCtx.shadowBlur = 10;
+      arenaCtx.fillRect(-18, -10, 36, 20);
+      arenaCtx.shadowBlur = 0;
+
+      // Cockpit Window
+      arenaCtx.fillStyle = '#06080d';
+      arenaCtx.fillRect(-6, -7, 16, 14);
+
+      // Wheels
+      arenaCtx.fillStyle = '#1c2233';
+      arenaCtx.fillRect(-16, -14, 10, 4);
+      arenaCtx.fillRect(6, -14, 10, 4);
+      arenaCtx.fillRect(-16, 10, 10, 4);
+      arenaCtx.fillRect(6, 10, 10, 4);
+
+      // Boost Flame
+      if (joyState.btn && Math.abs(buggy.speed) > 0.5) {
+        arenaCtx.fillStyle = '#ffaa00';
+        arenaCtx.beginPath();
+        arenaCtx.moveTo(-18, -5);
+        arenaCtx.lineTo(-32 - (Math.random() * 10), 0);
+        arenaCtx.lineTo(-18, 5);
+        arenaCtx.fill();
+      }
+
+      arenaCtx.restore();
+
+      // Speed HUD on Arena Canvas
+      arenaCtx.fillStyle = '#738096';
+      arenaCtx.font = '10px monospace';
+      arenaCtx.fillText(`SPEED: ${Math.abs(buggy.speed * 8).toFixed(0)} km/h | NITRO: ${joyState.btn ? 'ENGAGED 🚀' : 'READY'}`, 12, H - 12);
+    }
+
+    // ── MAIN ANIMATION LOOP ──
+    function animationLoop() {
+      drawJoystickGimbal();
+      drawScope();
+      updateBuggy();
+      drawArena();
+      requestAnimationFrame(animationLoop);
+    }
+    requestAnimationFrame(animationLoop);
+
+    // ── TELEMETRY INGESTION & UI UPDATE ──
+    function ingestTelemetry(data) {
+      joyState.rawX = data.rawX !== undefined ? data.rawX : (data.x || 2048);
+      joyState.rawY = data.rawY !== undefined ? data.rawY : (data.y || 2048);
+      joyState.normX = data.normX !== undefined ? data.normX : ((joyState.rawX - 2048) / 2048);
+      joyState.normY = data.normY !== undefined ? data.normY : ((joyState.rawY - 2048) / 2048);
+      joyState.vX = data.vX !== undefined ? data.vX : (joyState.rawX * 3.3 / 4095);
+      joyState.vY = data.vY !== undefined ? data.vY : (joyState.rawY * 3.3 / 4095);
+      joyState.btn = data.btn || 0;
+      joyState.mag = data.mag !== undefined ? data.mag : Math.min(1.0, Math.hypot(joyState.normX, joyState.normY));
+      joyState.deg = data.deg !== undefined ? data.deg : 0;
+      joyState.dir = data.dir || 'CENTER';
+
+      // Push into oscilloscope ring buffer
+      for (let i = 0; i < SCOPE_POINTS - 1; i++) {
+        scopeX[i] = scopeX[i + 1];
+        scopeY[i] = scopeY[i + 1];
+      }
+      scopeX[SCOPE_POINTS - 1] = joyState.normX;
+      scopeY[SCOPE_POINTS - 1] = -joyState.normY;
+
+      // Update Button State & Click Counter
+      const swWidget = document.getElementById('swWidget');
+      const swPill = document.getElementById('swPill');
+      if (joyState.btn) {
+        if (!wasPressed) {
+          clickCount++;
+          pressStartTime = performance.now();
+          playClickSound(800);
+          logMsg(`[BUTTON] GPIO 25 PRESSED (Click #${clickCount})`, 'magenta');
+        }
+        wasPressed = true;
+        swWidget.classList.add('pressed');
+        swPill.innerText = 'PRESSED';
+        const heldSec = ((performance.now() - pressStartTime) / 1000).toFixed(1);
+        document.getElementById('valHold').innerText = `${heldSec}s HELD`;
+      } else {
+        if (wasPressed) {
+          playClickSound(500);
+        }
+        wasPressed = false;
+        swWidget.classList.remove('pressed');
+        swPill.innerText = 'RELEASED';
+      }
+      document.getElementById('valClicks').innerText = clickCount;
+
+      // Update Text Displays
+      document.getElementById('valNormX').innerText = (joyState.normX > 0 ? '+' : '') + joyState.normX.toFixed(2);
+      document.getElementById('subX').innerText = `RAW: ${joyState.rawX} • ${joyState.vX.toFixed(2)}V`;
+
+      document.getElementById('valNormY').innerText = (joyState.normY > 0 ? '+' : '') + joyState.normY.toFixed(2);
+      document.getElementById('subY').innerText = `RAW: ${joyState.rawY} • ${joyState.vY.toFixed(2)}V`;
+
+      document.getElementById('valMag').innerText = `${Math.round(joyState.mag * 100)}%`;
+      document.getElementById('valAngle').innerText = `${joyState.deg.toFixed(1)}° DEG`;
+      document.getElementById('cardDirBadge').innerText = joyState.dir;
+
+      // Hz Calculation
+      packetCount++;
+      const now = performance.now();
+      if (now - lastHzCalc >= 1000) {
+        liveHz = packetCount;
+        packetCount = 0;
+        lastHzCalc = now;
+        const rateBadge = document.getElementById('rateBadge');
+        rateBadge.style.display = 'inline-flex';
+        rateBadge.innerText = `${liveHz} Hz`;
+      }
+    }
+
+    // ── WEB SERIAL API INTEGRATION ──
+    async function toggleSerial() {
+      if (isConnected && serialPort) {
+        disconnectSerial();
+        return;
+      }
+
+      if (!('serial' in navigator)) {
+        alert('Web Serial API is not supported in this browser. Please use Google Chrome, Microsoft Edge, Brave, or Opera on Mac/PC.');
+        return;
+      }
+
+      try {
+        logMsg('Requesting Serial Port at 115200 baud...');
+        serialPort = await navigator.serial.requestPort();
+        await serialPort.open({ baudRate: 115200 });
+
+        isConnected = true;
+        updateConnectionStatus(true, 'USB SERIAL CONNECTED');
+        document.getElementById('btnConnectSerial').innerText = 'Disconnect Serial';
+        document.getElementById('btnConnectSerial').className = 'btn btn-danger';
+        logMsg('Connected to ESP32! Reading incoming JSON stream...', 'green');
+
+        readSerialStream();
+      } catch (err) {
+        logMsg(`[ERROR] Connection failed: ${err.message}`);
+        disconnectSerial();
+      }
+    }
+
+    async function readSerialStream() {
+      const textDecoder = new TextDecoderStream();
+      const readableStreamClosed = serialPort.readable.pipeTo(textDecoder.writable);
+      const reader = textDecoder.readable.getReader();
+      serialReader = reader;
+
+      let buffer = '';
+
+      try {
+        while (isConnected) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) {
+            buffer += value;
+            let lines = buffer.split('\n');
+            buffer = lines.pop(); // keep remainder
+
+            for (let line of lines) {
+              line = line.trim();
+              if (!line) continue;
+
+              // Check if JSON
+              if (line.startsWith('{') && line.endsWith('}')) {
+                try {
+                  const data = JSON.parse(line);
+                  ingestTelemetry(data);
+                } catch (e) {}
+              } else {
+                // Print debug line to terminal
+                logMsg(line);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        logMsg(`[STREAM] Read error: ${err.message}`);
+      } finally {
+        reader.releaseLock();
+      }
+    }
+
+    async function disconnectSerial() {
+      isConnected = false;
+      if (serialReader) {
+        try { await serialReader.cancel(); } catch (e) {}
+        serialReader = null;
+      }
+      if (serialPort) {
+        try { await serialPort.close(); } catch (e) {}
+        serialPort = null;
+      }
+      updateConnectionStatus(false, 'DISCONNECTED');
+      document.getElementById('btnConnectSerial').innerText = '🔌 Connect USB (Web Serial)';
+      document.getElementById('btnConnectSerial').className = 'btn btn-primary';
+      logMsg('Disconnected from Serial port.');
+    }
+
+    // ── WI-FI TELEMETRY POLLING ──
+    function promptWifi() {
+      if (wifiPollInterval) {
+        clearInterval(wifiPollInterval);
+        wifiPollInterval = null;
+        updateConnectionStatus(false, 'DISCONNECTED');
+        document.getElementById('btnConnectWifi').innerText = '📡 Connect Wi-Fi';
+        logMsg('Disconnected from Wi-Fi endpoint.');
+        return;
+      }
+
+      const host = prompt('Enter ESP32 IP Address or Hostname (e.g. 192.168.4.1):', '192.168.4.1');
+      if (!host) return;
+
+      wifiHost = host.startsWith('http') ? host : `http://${host}`;
+      logMsg(`Connecting to Wi-Fi at ${wifiHost}/api/joy...`);
+
+      wifiPollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`${wifiHost}/api/joy`);
+          if (res.ok) {
+            const data = await res.json();
+            ingestTelemetry(data);
+            if (!isConnected) {
+              isConnected = true;
+              updateConnectionStatus(true, `WI-FI: ${host}`);
+              document.getElementById('btnConnectWifi').innerText = 'Disconnect Wi-Fi';
+              logMsg(`Streaming live from ${wifiHost}`, 'green');
+            }
+          }
+        } catch (e) {
+          // offline or packet lost
+        }
+      }, 25);
+    }
+
+    // ── SIMULATOR / DEMO MODE ──
+    let simAngle = 0;
+    let simInterval = null;
+
+    function toggleSimulator() {
+      isSimulator = !isSimulator;
+      const btn = document.getElementById('btnSim');
+      if (isSimulator) {
+        btn.innerText = '🎮 Simulator: ON';
+        btn.classList.add('btn-primary');
+        logMsg('Simulator Mode active! Move mouse over joystick gimbal or watch auto-orbit demo.', 'cyan');
+
+        simInterval = setInterval(() => {
+          if (!mouseIsDown) {
+            simAngle += 0.05;
+            const radius = 0.75 + (Math.sin(simAngle * 0.5) * 0.2);
+            const nx = Math.cos(simAngle) * radius;
+            const ny = Math.sin(simAngle) * radius;
+            const rawX = Math.round(2048 + (nx * 2000));
+            const rawY = Math.round(2048 + (ny * 2000));
+
+            ingestTelemetry({
+              rawX: rawX,
+              rawY: rawY,
+              normX: nx,
+              normY: ny,
+              mag: radius,
+              deg: ((simAngle * 180 / Math.PI) % 360 + 360) % 360,
+              btn: Math.sin(simAngle) > 0.85 ? 1 : 0,
+              dir: getDirectionLabel(nx, ny)
+            });
+          }
+        }, 30);
+      } else {
+        btn.innerText = '🎮 Simulator: OFF';
+        btn.classList.remove('btn-primary');
+        clearInterval(simInterval);
+        simInterval = null;
+        logMsg('Simulator stopped.');
+      }
+    }
+
+    function getDirectionLabel(x, y) {
+      const angle = (Math.atan2(-y, x) * 180 / Math.PI + 360) % 360;
+      if (angle >= 337.5 || angle < 22.5) return 'RIGHT';
+      if (angle >= 22.5 && angle < 67.5) return 'UP-RIGHT';
+      if (angle >= 67.5 && angle < 112.5) return 'UP';
+      if (angle >= 112.5 && angle < 157.5) return 'UP-LEFT';
+      if (angle >= 157.5 && angle < 202.5) return 'LEFT';
+      if (angle >= 202.5 && angle < 247.5) return 'DOWN-LEFT';
+      if (angle >= 247.5 && angle < 292.5) return 'DOWN';
+      return 'DOWN-RIGHT';
+    }
+
+    // ── MOUSE & TOUCH JOYSTICK CONTROLS ──
+    let mouseControl = true; // Enabled by default!
+    let mouseIsDown = false;
+    let isHoveringGimbal = false;
+    let springInterval = null;
+    const bezel = document.getElementById('joyBezel');
+
+    function toggleMouseMode() {
+      mouseControl = !mouseControl;
+      const btn = document.getElementById('btnMouseMode');
+      const badge = document.getElementById('mouseBadge');
+      if (mouseControl) {
+        btn.innerText = '🐭 Mouse: ON';
+        btn.classList.add('btn-primary');
+        badge.style.display = 'block';
+        logMsg('Mouse Control enabled. Move cursor over circle to steer joystick.', 'cyan');
+      } else {
+        btn.innerText = '🐭 Mouse: OFF';
+        btn.classList.remove('btn-primary');
+        badge.style.display = 'none';
+        logMsg('Mouse Control disabled.');
+        springToCenter();
+      }
+    }
+
+    function springToCenter() {
+      if (springInterval) clearInterval(springInterval);
+      springInterval = setInterval(() => {
+        let nx = joyState.normX * 0.75;
+        let ny = joyState.normY * 0.75;
+        if (Math.hypot(nx, ny) < 0.01) {
+          nx = 0; ny = 0;
+          clearInterval(springInterval);
+          springInterval = null;
+        }
+        ingestTelemetry({
+          rawX: Math.round(2048 + (nx * 2000)),
+          rawY: Math.round(2048 + (ny * 2000)),
+          normX: nx,
+          normY: ny,
+          mag: Math.hypot(nx, ny),
+          deg: nx === 0 && ny === 0 ? 0 : ((Math.atan2(-ny, nx) * 180 / Math.PI) + 360) % 360,
+          btn: 0,
+          dir: nx === 0 && ny === 0 ? 'CENTER' : getDirectionLabel(nx, ny)
+        });
+      }, 16);
+    }
+
+    function handlePointerEvent(e, isPress = null) {
+      if (springInterval) {
+        clearInterval(springInterval);
+        springInterval = null;
+      }
+
+      const rect = joyCanvas.getBoundingClientRect();
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      const dx = clientX - (rect.left + rect.width / 2);
+      const dy = clientY - (rect.top + rect.height / 2);
+      const maxR = (rect.width / 2) - 40;
+
+      let normX = dx / maxR;
+      let normY = dy / maxR;
+      const mag = Math.hypot(normX, normY);
+      if (mag > 1.0) {
+        normX /= mag;
+        normY /= mag;
+      }
+
+      let btn = joyState.btn;
+      if (isPress !== null) {
+        btn = isPress ? 1 : 0;
+      } else if (e.buttons !== undefined) {
+        btn = (e.buttons & 1) ? 1 : 0; // Left-click down
+      }
+
+      ingestTelemetry({
+        rawX: Math.round(2048 + (normX * 2000)),
+        rawY: Math.round(2048 + (normY * 2000)),
+        normX: normX,
+        normY: normY,
+        mag: Math.min(1.0, mag),
+        deg: ((Math.atan2(-normY, normX) * 180 / Math.PI) + 360) % 360,
+        btn: btn,
+        dir: getDirectionLabel(normX, normY)
+      });
+    }
+
+    // Direct Mouse Move (Hover) over Bezel
+    bezel.addEventListener('mouseenter', () => {
+      isHoveringGimbal = true;
+    });
+
+    bezel.addEventListener('mousemove', (e) => {
+      if (mouseControl || mouseIsDown) {
+        handlePointerEvent(e);
+      }
+    });
+
+    bezel.addEventListener('mouseleave', () => {
+      isHoveringGimbal = false;
+      if (!mouseIsDown && !isSimulator && !isConnected) {
+        springToCenter();
+      }
+    });
+
+    // Mouse Click & Drag (Push SW Button on click)
+    bezel.addEventListener('mousedown', (e) => {
+      mouseIsDown = true;
+      handlePointerEvent(e, true); // true = push button!
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (mouseIsDown) {
+        handlePointerEvent(e, true);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (mouseIsDown) {
+        mouseIsDown = false;
+        if (!isHoveringGimbal && !isSimulator && !isConnected) {
+          springToCenter();
+        } else {
+          // Release button
+          ingestTelemetry({
+            ...joyState,
+            btn: 0
+          });
+        }
+      }
+    });
+
+    // Touch events for mobile/tablet
+    bezel.addEventListener('touchstart', (e) => {
+      mouseIsDown = true;
+      handlePointerEvent(e, true);
+      e.preventDefault();
+    }, { passive: false });
+
+    bezel.addEventListener('touchmove', (e) => {
+      if (mouseIsDown) handlePointerEvent(e);
+      e.preventDefault();
+    }, { passive: false });
+
+    bezel.addEventListener('touchend', () => {
+      mouseIsDown = false;
+      if (!isSimulator && !isConnected) {
+        springToCenter();
+      }
+    });
+
+    // Click on SW Button widget directly to toggle/click
+    document.getElementById('swWidget').addEventListener('mousedown', () => {
+      ingestTelemetry({ ...joyState, btn: 1 });
+    });
+    document.getElementById('swWidget').addEventListener('mouseup', () => {
+      ingestTelemetry({ ...joyState, btn: 0 });
+    });
+
+    // Keyboard support: Arrow keys & WASD to steer, Space to press button
+    const keysPressed = {};
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', ' '].includes(e.key)) {
+        keysPressed[e.key.toLowerCase()] = true;
+        updateKeyboardJoystick();
+      }
+    });
+    window.addEventListener('keyup', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', ' '].includes(e.key)) {
+        keysPressed[e.key.toLowerCase()] = false;
+        updateKeyboardJoystick();
+      }
+    });
+
+    function updateKeyboardJoystick() {
+      let kx = 0;
+      let ky = 0;
+      if (keysPressed['arrowleft'] || keysPressed['a']) kx -= 1;
+      if (keysPressed['arrowright'] || keysPressed['d']) kx += 1;
+      if (keysPressed['arrowup'] || keysPressed['w']) ky -= 1;
+      if (keysPressed['arrowdown'] || keysPressed['s']) ky += 1;
+
+      const btn = keysPressed[' '] ? 1 : 0;
+      const mag = Math.hypot(kx, ky);
+      if (mag > 0) {
+        kx /= mag;
+        ky /= mag;
+        ingestTelemetry({
+          rawX: Math.round(2048 + (kx * 2000)),
+          rawY: Math.round(2048 + (ky * 2000)),
+          normX: kx,
+          normY: ky,
+          mag: 1.0,
+          deg: ((Math.atan2(-ky, kx) * 180 / Math.PI) + 360) % 360,
+          btn: btn,
+          dir: getDirectionLabel(kx, ky)
+        });
+      } else if (!mouseIsDown && !isHoveringGimbal && !isSimulator && !isConnected) {
+        springToCenter();
+      }
+    }
+
+    // ── CALIBRATE & HELPERS ──
+    async function calibrateCenter() {
+      logMsg('Calibrating center zero position...');
+      centerX = joyState.rawX;
+      centerY = joyState.rawY;
+
+      // If connected via serial, send 'c' command to ESP32
+      if (serialPort && serialPort.writable) {
+        try {
+          const writer = serialPort.writable.getWriter();
+          await writer.write(new TextEncoder().encode('c'));
+          writer.releaseLock();
+          logMsg('Sent calibration command [c] to ESP32 via Serial.', 'cyan');
+        } catch (e) {}
+      }
+
+      if (wifiHost) {
+        fetch(`${wifiHost}/api/calibrate`).catch(() => {});
+      }
+
+      logMsg(`Calibrated! Resting center saved: X=${centerX}, Y=${centerY}`, 'green');
+    }
+
+    function updateConnectionStatus(active, text) {
+      const dot = document.getElementById('statusDot');
+      const label = document.getElementById('statusText');
+      if (active) {
+        dot.classList.add('active');
+        label.innerText = text;
+        label.style.color = '#00ff88';
+      } else {
+        dot.classList.remove('active');
+        label.innerText = text;
+        label.style.color = '#738096';
+        document.getElementById('rateBadge').style.display = 'none';
+      }
+    }
+
+    function logMsg(msg, color = '') {
+      const term = document.getElementById('termLog');
+      const d = new Date();
+      const timeStr = d.toTimeString().split(' ')[0];
+      const div = document.createElement('div');
+      if (color) div.className = color;
+      div.textContent = `[${timeStr}] ${msg}`;
+      term.appendChild(div);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('termLog').innerHTML = '';
+    }
+  </script>
+</body>
+</html>
