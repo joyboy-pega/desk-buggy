@@ -15,6 +15,7 @@ An open-source embedded graphics ecosystem featuring **four distinct projects** 
 ### 🌈 1.8" ST7735 Color TFT Firmware (ESP32-WROOM-32 @ 240MHz, SPI)
 | Project | Frame Rate | Key Highlights | Location |
 |---|---|---|---|
+| **🕹️ Dual-Axis Joystick & Mouse** | **50 FPS / 125 Hz** | Standalone BLE wireless mouse for macOS, real-time radar HUD, 50Hz serial visualizer & Web Serial studio | [`esp32-joystick/`](esp32-joystick/) |
 | **🐙 Dev GitHub Telemetry Watch** | 30 FPS | Full-width developer HUD: NTP clock, Pune location, core temp, @joyboy-pega contributions & web control | [`tft-github-telemetry-watch/`](tft-github-telemetry-watch/) (and default [`src/`](src/)) |
 | **🌸 Anime Telemetry Watch HUD**  | 30 FPS | 16-bit pixel art anime companion (blinking & breathing), NTP clock, Pune location, GitHub stats | [`tft-anime-telemetry-watch/`](tft-anime-telemetry-watch/) |
 | **📟 Hangry Mood Scroll Badge**   | **50 FPS** | Double-buffered marquee ticker, iconic pastel pink `:( hangry`, web control portal & live text | [`tft-scroll-badge/`](tft-scroll-badge/) |
