@@ -220,6 +220,9 @@ export const HardwareScreenSimulator: React.FC<HardwareScreenSimulatorProps> = (
 
       // Render preset specific screen
       switch (preset.id) {
+        case 'esp32-joystick':
+          renderJoystickHUD(ctx, s);
+          break;
         case 'esp32-nothing-hud':
           renderNothingHUD(ctx, s.time, brightness);
           break;
@@ -1199,6 +1202,75 @@ export const HardwareScreenSimulator: React.FC<HardwareScreenSimulatorProps> = (
     ctx.font = '6px monospace';
     ctx.fillText('LIVE UART 921600 BAUD', 20, 14);
     ctx.fillText('RES: 160x120 RGB565', 20, 118);
+  };
+
+  const renderJoystickHUD = (ctx: CanvasRenderingContext2D, s: any) => {
+    const t = s.time * 0.002;
+    const joyX = 80 + Math.sin(t) * 22;
+    const joyY = 56 + Math.cos(t * 1.5) * 18;
+    const dx = Math.round((joyX - 80) * 0.5);
+    const dy = Math.round((joyY - 56) * 0.5);
+    const isClick = Math.sin(t * 2.8) > 0.82;
+
+    // Header
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, 160, 16);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 8px monospace';
+    ctx.fillText('JOYSTICK MOUSE', 6, 11);
+
+    // BT Pill
+    ctx.fillStyle = '#00FF88';
+    ctx.fillRect(100, 2, 56, 12);
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 7px monospace';
+    ctx.fillText('BT PAIRED', 104, 11);
+
+    // Radar Box
+    const rx = 48, ry = 20, rw = 64, rh = 64;
+    ctx.fillStyle = '#080c14';
+    ctx.fillRect(rx, ry, rw, rh);
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(rx, ry, rw, rh);
+
+    // Reticle
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.beginPath();
+    ctx.arc(80, 52, 24, 0, Math.PI * 2);
+    ctx.arc(80, 52, 12, 0, Math.PI * 2);
+    ctx.moveTo(rx, 52); ctx.lineTo(rx + rw, 52);
+    ctx.moveTo(80, ry); ctx.lineTo(80, ry + rh);
+    ctx.stroke();
+
+    // Joystick position vector
+    ctx.strokeStyle = isClick ? '#ff0055' : '#00f0ff';
+    ctx.beginPath();
+    ctx.moveTo(80, 52);
+    ctx.lineTo(joyX, joyY);
+    ctx.stroke();
+
+    // Cursor indicator
+    ctx.fillStyle = isClick ? '#ff0055' : '#00f0ff';
+    ctx.beginPath();
+    ctx.arc(joyX, joyY, isClick ? 5 : 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Telemetry footer
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 88, 160, 40);
+    ctx.strokeStyle = '#1e2436';
+    ctx.strokeRect(0, 88, 160, 40);
+
+    ctx.fillStyle = '#738096';
+    ctx.font = '8px monospace';
+    ctx.fillText(`DX:${dx >= 0 ? '+' : ''}${dx}  DY:${dy >= 0 ? '+' : ''}${dy}`, 6, 102);
+    ctx.fillText(`SW:${isClick ? 'CLICK [L]' : 'IDLE'}  50Hz`, 6, 118);
+
+    ctx.fillStyle = '#00f0ff';
+    ctx.fillText('ADC1_CH6/7', 96, 102);
+    ctx.fillStyle = '#00ff88';
+    ctx.fillText('BLE HID', 96, 118);
   };
 
   const renderDefaultFallback = (ctx: CanvasRenderingContext2D, title: string) => {
