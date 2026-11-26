@@ -34,7 +34,10 @@
 const char* DEFAULT_WIFI_SSID = "Arigatoo1";
 const char* DEFAULT_WIFI_PASS = "12345678";
 bool wifiConnected = false;
-char wifiIP[24] = "OFFLINE"; // Amber Orange (#FFAA00)
+char wifiIP[24] = "OFFLINE";
+int clockHour = 9, clockMin = 41, clockSec = 0;
+unsigned long lastSecTick = 0;
+unsigned long lastFrameTime = 0; // Amber Orange (#FFAA00)
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 GFXcanvas16* canvas = nullptr;
