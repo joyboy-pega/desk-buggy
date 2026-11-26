@@ -107,5 +107,74 @@ Employee* getEmployeeBySlot(uint16_t slot) {
   return nullptr;
 }
 
-void setup() { loadEmployeeDatabase(); }
-void loop() {}
+struct BuzzerTone {
+  uint16_t duration;
+  uint16_t pause;
+};
+
+#define MAX_TONES 4
+BuzzerTone toneQueue[MAX_TONES];
+int toneCount = 0;
+int currentToneIdx = 0;
+unsigned long toneStartTime = 0;
+bool toneIsPlaying = false;
+bool toneInPause = false;
+
+void playAsyncTones(const BuzzerTone* tones, int count) {
+  toneCount = min(count, MAX_TONES);
+  for (int i = 0; i < toneCount; i++) toneQueue[i] = tones[i];
+  currentToneIdx = 0;
+  toneStartTime = millis();
+  toneIsPlaying = true;
+  toneInPause = false;
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, HIGH);
+}
+
+void beepAsync(uint16_t ms) {
+  const BuzzerTone t[] = {{ms, 0}};
+  playAsyncTones(t, 1);
+}
+
+void beepOKAsync() {
+  const BuzzerTone t[] = {{60, 30}, {90, 0}};
+  playAsyncTones(t, 2);
+}
+
+void beepErrorAsync() {
+  const BuzzerTone t[] = {{150, 40}, {200, 0}};
+  playAsyncTones(t, 2);
+}
+
+void updateBuzzer() {
+  if (!toneIsPlaying) return;
+  unsigned long elapsed = millis() - toneStartTime;
+  BuzzerTone& t = toneQueue[currentToneIdx];
+  if (!toneInPause) {
+    if (elapsed >= t.duration) {
+      digitalWrite(BUZZER_PIN, LOW);
+      if (t.pause > 0) {
+        toneInPause = true;
+        toneStartTime = millis();
+      } else {
+        currentToneIdx++;
+        if (currentToneIdx >= toneCount) toneIsPlaying = false;
+        else { toneStartTime = millis(); digitalWrite(BUZZER_PIN, HIGH); }
+      }
+    }
+  } else {
+    if (elapsed >= t.pause) {
+      toneInPause = false;
+      currentToneIdx++;
+      if (currentToneIdx >= toneCount) toneIsPlaying = false;
+      else { toneStartTime = millis(); digitalWrite(BUZZER_PIN, HIGH); }
+    }
+  }
+}
+
+void setup() {
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+  loadEmployeeDatabase();
+}
+void loop() { updateBuzzer(); }
