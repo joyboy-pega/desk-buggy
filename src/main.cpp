@@ -39,6 +39,22 @@ uint8_t currentRotation = 3;
 bool needsImmediateRedraw = true;
 Preferences prefs;
 
+void drawCenteredText(const char* text, int cx, int y, uint8_t maxTextSize, int maxWidth, uint16_t color) {
+  if (!canvas) return;
+  int16_t x1, y1;
+  uint16_t w, h;
+  for (int sz = maxTextSize; sz >= 1; sz--) {
+    canvas->setTextSize(sz);
+    canvas->getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+    if ((int)w <= maxWidth || sz == 1) {
+      canvas->setTextColor(color);
+      canvas->setCursor(cx - ((int)w / 2), y);
+      canvas->print(text);
+      return;
+    }
+  }
+}
+
 void applyRotation(uint8_t rot) {
   currentRotation = rot;
   tft.setRotation(currentRotation);
