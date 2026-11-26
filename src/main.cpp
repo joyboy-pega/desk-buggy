@@ -37,7 +37,8 @@ bool wifiConnected = false;
 char wifiIP[24] = "OFFLINE";
 int clockHour = 9, clockMin = 41, clockSec = 0;
 unsigned long lastSecTick = 0;
-unsigned long lastFrameTime = 0; // Amber Orange (#FFAA00)
+unsigned long lastFrameTime = 0;
+uint8_t pulseTick = 0; // Amber Orange (#FFAA00)
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 GFXcanvas16* canvas = nullptr;
