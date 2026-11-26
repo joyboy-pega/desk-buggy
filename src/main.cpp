@@ -265,3 +265,17 @@ void setup() {
   loadEmployeeDatabase();
 }
 void loop() { updateBuzzer(); }
+
+void renderMarkedScreen() {
+  if (!canvas) return;
+  canvas->fillScreen(C_BG);
+  canvas->fillRoundRect(6, 6, W - 12, H - 12, 6, C_CARD);
+  canvas->drawRoundRect(6, 6, W - 12, H - 12, 6, C_GREEN);
+  drawCenteredText("MARKED", W / 2, 16, 2, W - 20, C_GREEN);
+  canvas->drawFastHLine(20, 38, W - 40, C_BORDER);
+  drawCenteredText(lastPunchName, W / 2, 48, 2, W - 24, C_WHITE);
+  char statBuf[24];
+  snprintf(statBuf, sizeof(statBuf), "%s • %s", lastPunchTime, lastPunchIsIn ? "IN" : "OUT");
+  drawCenteredText(statBuf, W / 2, 74, 1, W - 20, C_GREEN);
+  drawCenteredText("ATTENDANCE LOGGED", W / 2, 94, 1, W - 20, C_MUTED);
+}
