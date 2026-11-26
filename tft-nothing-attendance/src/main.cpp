@@ -29,7 +29,12 @@
 #define C_CARD        0x10A2 // Slate Card (#12151A)
 #define C_BORDER      0x2965 // Outline Gray (#282C34)
 #define C_MUTED       0x7BEF // Subtitle Gray (#7A808C)
-#define C_AMBER       0xFD20 // Amber Orange (#FFAA00)
+#define C_AMBER       0xFD20
+
+const char* DEFAULT_WIFI_SSID = "Arigatoo1";
+const char* DEFAULT_WIFI_PASS = "12345678";
+bool wifiConnected = false;
+char wifiIP[24] = "OFFLINE"; // Amber Orange (#FFAA00)
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 GFXcanvas16* canvas = nullptr;
