@@ -40,7 +40,21 @@ unsigned long lastSecTick = 0;
 unsigned long lastFrameTime = 0;
 uint8_t pulseTick = 0;
 int scanLineY = 2;
-int scanLineDir = 1; // Amber Orange (#FFAA00)
+int scanLineDir = 1;
+enum ScreenState {
+  STATE_IDLE,
+  STATE_MARKED,
+  STATE_ERROR,
+  STATE_ENROLL_STEP1,
+  STATE_ENROLL_STEP2,
+  STATE_ENROLL_SUCCESS
+};
+ScreenState currentScreen = STATE_IDLE;
+unsigned long resultUntil = 0;
+char lastPunchName[24] = "Joyboy";
+uint16_t lastPunchSlot = 1;
+char lastPunchTime[16] = "09:41 AM";
+bool lastPunchIsIn     = true; // Amber Orange (#FFAA00)
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
 GFXcanvas16* canvas = nullptr;
