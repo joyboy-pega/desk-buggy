@@ -279,3 +279,13 @@ void renderMarkedScreen() {
   drawCenteredText(statBuf, W / 2, 74, 1, W - 20, C_GREEN);
   drawCenteredText("ATTENDANCE LOGGED", W / 2, 94, 1, W - 20, C_MUTED);
 }
+
+void renderErrorScreen() {
+  if (!canvas) return;
+  canvas->fillScreen(C_BG);
+  canvas->fillRoundRect(6, 6, W - 12, H - 12, 6, C_CARD);
+  canvas->drawRoundRect(6, 6, W - 12, H - 12, 6, C_RED);
+  drawCenteredText("NOT MATCHED", W / 2, 28, 2, W - 20, C_RED);
+  drawCenteredText("TRY AGAIN", W / 2, 62, 1, W - 20, C_WHITE);
+  drawCenteredText("PLACE FINGER FIRMLY", W / 2, 84, 1, W - 20, C_MUTED);
+}
