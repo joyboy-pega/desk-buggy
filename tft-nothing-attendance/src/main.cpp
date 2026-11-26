@@ -289,3 +289,36 @@ void renderErrorScreen() {
   drawCenteredText("TRY AGAIN", W / 2, 62, 1, W - 20, C_WHITE);
   drawCenteredText("PLACE FINGER FIRMLY", W / 2, 84, 1, W - 20, C_MUTED);
 }
+
+char enrollTargetName[24] = "Worker";
+uint16_t enrollTargetSlot = 1;
+
+void renderEnrollStep1() {
+  if (!canvas) return;
+  canvas->fillScreen(C_BG);
+  canvas->fillRoundRect(6, 6, W - 12, H - 12, 6, C_CARD);
+  canvas->drawRoundRect(6, 6, W - 12, H - 12, 6, C_AMBER);
+  drawCenteredText("ENROLL STEP 1", W / 2, 20, 1, W - 20, C_AMBER);
+  drawCenteredText(enrollTargetName, W / 2, 42, 2, W - 20, C_WHITE);
+  drawCenteredText("PLACE FINGER", W / 2, 74, 1, W - 20, C_WHITE);
+}
+
+void renderEnrollStep2() {
+  if (!canvas) return;
+  canvas->fillScreen(C_BG);
+  canvas->fillRoundRect(6, 6, W - 12, H - 12, 6, C_CARD);
+  canvas->drawRoundRect(6, 6, W - 12, H - 12, 6, C_WHITE);
+  drawCenteredText("ENROLL STEP 2", W / 2, 20, 1, W - 20, C_WHITE);
+  drawCenteredText(enrollTargetName, W / 2, 42, 2, W - 20, C_WHITE);
+  drawCenteredText("LIFT & PLACE AGAIN", W / 2, 74, 1, W - 20, C_GREEN);
+}
+
+void renderEnrollSuccess() {
+  if (!canvas) return;
+  canvas->fillScreen(C_BG);
+  canvas->fillRoundRect(6, 6, W - 12, H - 12, 6, C_CARD);
+  canvas->drawRoundRect(6, 6, W - 12, H - 12, 6, C_GREEN);
+  drawCenteredText("ENROLLED!", W / 2, 22, 2, W - 20, C_GREEN);
+  drawCenteredText(enrollTargetName, W / 2, 52, 2, W - 20, C_WHITE);
+  drawCenteredText("SAVED TO MEMORY", W / 2, 82, 1, W - 20, C_MUTED);
+}
