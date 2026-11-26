@@ -39,6 +39,20 @@ uint8_t currentRotation = 3;
 bool needsImmediateRedraw = true;
 Preferences prefs;
 
+void renderBootStage(const char* title, const char* subtitle, int progress) {
+  if (!canvas) return;
+  canvas->fillScreen(C_BG);
+  canvas->fillRoundRect(10, 20, W - 20, H - 40, 6, C_CARD);
+  canvas->drawRoundRect(10, 20, W - 20, H - 40, 6, C_BORDER);
+  drawCenteredText(title, W / 2, 38, 2, W - 32, C_WHITE);
+  drawCenteredText(subtitle, W / 2, 60, 1, W - 32, C_MUTED);
+  int barX = 24, barY = 82, barW = W - 48;
+  canvas->drawRect(barX, barY, barW, 6, C_BORDER);
+  int fillW = (barW - 2) * progress / 100;
+  if (fillW > 0) canvas->fillRect(barX + 1, barY + 1, fillW, 4, C_GREEN);
+  tft.drawRGBBitmap(0, 0, canvas->getBuffer(), W, H);
+}
+
 void drawCenteredText(const char* text, int cx, int y, uint8_t maxTextSize, int maxWidth, uint16_t color) {
   if (!canvas) return;
   int16_t x1, y1;
@@ -209,6 +223,12 @@ void setup() {
   tft.initR(INITR_BLACKTAB);
   applyRotation(currentRotation);
   tft.fillScreen(C_BG);
+  for (int p = 0; p <= 100; p += 25) {
+    renderBootStage("ARIGATOO", "ATTENDANCE TERMINAL", p);
+    delay(20);
+  }
+  beepAsync(40);
+  delay(140);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
   loadEmployeeDatabase();
