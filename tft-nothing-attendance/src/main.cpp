@@ -31,7 +31,23 @@
 #define C_MUTED       0x7BEF // Subtitle Gray (#7A808C)
 #define C_AMBER       0xFD20 // Amber Orange (#FFAA00)
 
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+GFXcanvas16* canvas = nullptr;
+int W = 160;
+int H = 128;
+uint8_t currentRotation = 3;
+bool needsImmediateRedraw = true;
 Preferences prefs;
+
+void applyRotation(uint8_t rot) {
+  currentRotation = rot;
+  tft.setRotation(currentRotation);
+  W = tft.width();
+  H = tft.height();
+  if (canvas) { delete canvas; canvas = nullptr; }
+  canvas = new GFXcanvas16(W, H);
+  needsImmediateRedraw = true;
+}
 
 struct Employee {
   uint16_t id;
@@ -173,6 +189,10 @@ void updateBuzzer() {
 }
 
 void setup() {
+  SPI.setFrequency(27000000);
+  tft.initR(INITR_BLACKTAB);
+  applyRotation(currentRotation);
+  tft.fillScreen(C_BG);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
   loadEmployeeDatabase();
