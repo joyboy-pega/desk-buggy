@@ -191,6 +191,22 @@ void updateBuzzer() {
 }
 
 // ----------------------------------------------------------------------------
+// BLUE LED CONTROL (TURNS OFF ONBOARD ESP32 & SENSOR LED)
+// ----------------------------------------------------------------------------
+void turnOffBlueLED() {
+  // 1. Turn off onboard ESP32 Blue LED (connected to GPIO 2 / TFT_DC)
+  digitalWrite(TFT_DC, LOW);
+
+  // 2. Turn off optical fingerprint sensor blue LED ring / backlight
+  if (sensorHardwareFound) {
+    finger.LEDcontrol(false);
+    finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_BLUE, 0);
+    finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_PURPLE, 0);
+    finger.LEDcontrol(FINGERPRINT_LED_OFF, 0, FINGERPRINT_LED_RED, 0);
+  }
+}
+
+// ----------------------------------------------------------------------------
 // DYNAMIC ROTATION ALLOCATOR
 // ----------------------------------------------------------------------------
 void applyRotation(uint8_t rot) {
@@ -601,6 +617,10 @@ void processSerialCommand(String cmd) {
     needsImmediateRedraw = true;
     Serial.printf("WiFi: %s\n", wifiConnected ? "ONLINE" : "OFFLINE");
 
+  } else if (cmd.equalsIgnoreCase("b") || cmd.equalsIgnoreCase("led") || cmd.equalsIgnoreCase("blue")) {
+    turnOffBlueLED();
+    Serial.println("[LED] Blue LED turned OFF.");
+
   } else if (cmd.equalsIgnoreCase("l")) {
     Serial.printf("\nEmployees (%d):\n", employeeCount);
     for (int i = 0; i < employeeCount; i++) {
@@ -645,6 +665,9 @@ void setup() {
     sensorHardwareFound = false;
     Serial.println("[SENSOR] Simulation mode active");
   }
+
+  // Turn off Blue LEDs immediately
+  turnOffBlueLED();
 
   printHelp();
   needsImmediateRedraw = true;
@@ -769,6 +792,7 @@ void loop() {
           break;
       }
       tft.drawRGBBitmap(0, 0, canvas->getBuffer(), W, H);
+      turnOffBlueLED();
     }
   }
 
