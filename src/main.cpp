@@ -10,13 +10,14 @@
 // ============================================================================
 // ARIGATOO // INFRANEX DEV // MINIMAL ATTENDANCE SYSTEM
 // ============================================================================
-// Steady, distraction-free UI with ZERO flickering/blinking.
-// Rock-solid display that updates only on clock second ticks or finger touch.
+// Zero-blinking, zero-flicker architecture.
+// Completely turns off onboard blue LED (GPIO 2) and optical sensor LED.
+// Display is 100% static when idle (no 1-second SPI redraw pulses).
 // ============================================================================
 
 // ---------- PIN DEFINITIONS (Standard ESP32 VSPI) ----------
 #define TFT_CS          5    // Chip Select
-#define TFT_DC          2    // Data / Command
+#define TFT_DC          2    // Data / Command (Directly shared with ESP32 Blue LED)
 #define TFT_RST         4    // Reset
 #define TFT_MOSI       23    // VSPI MOSI (SDA)
 #define TFT_SCLK       18    // VSPI SCK (SCL)
@@ -191,10 +192,11 @@ void updateBuzzer() {
 }
 
 // ----------------------------------------------------------------------------
-// BLUE LED CONTROL (TURNS OFF ONBOARD ESP32 & SENSOR LED)
+// BLUE LED CONTROL (FORCES ONBOARD ESP32 & SENSOR LEDS 100% OFF)
 // ----------------------------------------------------------------------------
 void turnOffBlueLED() {
-  // 1. Turn off onboard ESP32 Blue LED (connected to GPIO 2 / TFT_DC)
+  // 1. Force onboard ESP32 Blue LED (wired to GPIO 2 / TFT_DC) LOW
+  pinMode(TFT_DC, OUTPUT);
   digitalWrite(TFT_DC, LOW);
 
   // 2. Turn off optical fingerprint sensor blue LED ring / backlight
@@ -221,6 +223,7 @@ void applyRotation(uint8_t rot) {
   }
   canvas = new GFXcanvas16(W, H);
   needsImmediateRedraw = true;
+  turnOffBlueLED();
   Serial.printf("[DISPLAY] Resolution: %dx%d (Rot: %d)\n", W, H, currentRotation);
 }
 
@@ -322,14 +325,12 @@ void renderBootStage(const char* title, const char* subtitle, int progress) {
   if (!canvas) return;
   canvas->fillScreen(C_BG);
 
-  // Minimal Hero Card
   canvas->fillRoundRect(10, 20, W - 20, H - 40, 6, C_CARD);
   canvas->drawRoundRect(10, 20, W - 20, H - 40, 6, C_BORDER);
 
   drawCenteredText(title, W / 2, 38, 2, W - 32, C_WHITE);
   drawCenteredText(subtitle, W / 2, 60, 1, W - 32, C_MUTED);
 
-  // Progress Bar
   int barX = 24;
   int barY = 82;
   int barW = W - 48;
@@ -340,28 +341,27 @@ void renderBootStage(const char* title, const char* subtitle, int progress) {
   }
 
   tft.drawRGBBitmap(0, 0, canvas->getBuffer(), W, H);
+  digitalWrite(TFT_DC, LOW); // Kill blue LED immediately
 }
 
 void runBootSequence() {
   Serial.println("\n--- BOOTING ATTENDANCE SYSTEM ---");
 
-  // Stage 1: Arigatoo
-  for (int p = 0; p <= 100; p += 25) {
+  for (int p = 0; p <= 100; p += 35) {
     renderBootStage("ARIGATOO", "ATTENDANCE TERMINAL", p);
     delay(20);
   }
   beepAsync(40);
-  delay(140);
+  delay(120);
 
-  // Stage 2: Infranex Dev
-  for (int p = 0; p <= 100; p += 25) {
+  for (int p = 0; p <= 100; p += 35) {
     renderBootStage("INFRANEX DEV", "FIRMWARE READY", p);
     delay(20);
   }
   beepAsync(50);
-  delay(140);
+  delay(120);
 
-  // Stage 3: WiFi Initialization
+  // WiFi Initialization
   canvas->fillScreen(C_BG);
   canvas->fillRoundRect(10, 20, W - 20, H - 40, 6, C_CARD);
   canvas->drawRoundRect(10, 20, W - 20, H - 40, 6, C_BORDER);
@@ -369,12 +369,13 @@ void runBootSequence() {
   drawCenteredText("CONNECTING", W / 2, 38, 2, W - 32, C_WHITE);
   drawCenteredText(DEFAULT_WIFI_SSID, W / 2, 60, 1, W - 32, C_MUTED);
   tft.drawRGBBitmap(0, 0, canvas->getBuffer(), W, H);
+  digitalWrite(TFT_DC, LOW);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASS);
 
   unsigned long startWifi = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - startWifi < 1200) {
+  while (WiFi.status() != WL_CONNECTED && millis() - startWifi < 1000) {
     delay(30);
   }
 
@@ -394,7 +395,8 @@ void runBootSequence() {
     drawCenteredText("OFFLINE MODE", W / 2, 68, 1, W - 32, C_MUTED);
   }
   tft.drawRGBBitmap(0, 0, canvas->getBuffer(), W, H);
-  delay(250);
+  digitalWrite(TFT_DC, LOW);
+  delay(200);
 }
 
 // ----------------------------------------------------------------------------
@@ -445,24 +447,24 @@ void startEnrollment(const String& nameArg, uint16_t slotArg) {
 }
 
 // ----------------------------------------------------------------------------
-// STEADY, MINIMAL RENDERING SCREENS (NO BLINKING / FLICKERING)
+// STEADY, STATIC RENDERING SCREENS (NO BLINKING / FLICKERING)
 // ----------------------------------------------------------------------------
 void renderIdleScreen() {
   if (!canvas) return;
   canvas->fillScreen(C_BG);
 
-  // 1. Top Bar: Clean minimal status with STEADY indicator dot (NO BLINKING)
+  // 1. Top Bar: Clean minimal status with steady dot
   canvas->setTextSize(1);
   if (wifiConnected) {
     canvas->setTextColor(C_GREEN);
     canvas->setCursor(10, 6);
     canvas->print("WIFI: OK");
-    canvas->fillCircle(W - 12, 9, 2, C_GREEN); // Steady solid green
+    canvas->fillCircle(W - 12, 9, 2, C_GREEN);
   } else {
     canvas->setTextColor(C_MUTED);
     canvas->setCursor(10, 6);
     canvas->print("OFFLINE");
-    canvas->fillCircle(W - 12, 9, 2, C_AMBER); // Steady solid amber
+    canvas->fillCircle(W - 12, 9, 2, C_AMBER);
   }
 
   // 2. Center Hero: Large Crisp Digital Clock (TextSize 4, Steady)
@@ -475,7 +477,7 @@ void renderIdleScreen() {
   canvas->setTextColor(C_MUTED);
   drawCenteredText("THU, 27 NOV", W / 2, 66, 1, W - 20, C_MUTED);
 
-  // 3. Bottom Pill Card: "PLACE FINGER" (Clean static reticle, NO BLINKING LASER)
+  // 3. Bottom Pill Card: "PLACE FINGER" (Clean static reticle, NO BLINKING)
   int pillY = 84;
   int pillH = 34;
   int pillW = W - 20;
@@ -502,25 +504,16 @@ void renderMarkedScreen() {
   if (!canvas) return;
   canvas->fillScreen(C_BG);
 
-  // Hero Card with Green Accent Frame
   canvas->fillRoundRect(6, 6, W - 12, H - 12, 6, C_CARD);
   canvas->drawRoundRect(6, 6, W - 12, H - 12, 6, C_GREEN);
 
-  // Big Green "MARKED" Headline
   drawCenteredText("MARKED", W / 2, 16, 2, W - 20, C_GREEN);
-
-  // Clean divider
   canvas->drawFastHLine(20, 38, W - 40, C_BORDER);
-
-  // Employee Name (Large & Centered)
   drawCenteredText(lastPunchName, W / 2, 48, 2, W - 24, C_WHITE);
 
-  // Time & In/Out Status
   char statBuf[24];
   snprintf(statBuf, sizeof(statBuf), "%s • %s", lastPunchTime, lastPunchIsIn ? "IN" : "OUT");
   drawCenteredText(statBuf, W / 2, 74, 1, W - 20, C_GREEN);
-
-  // Simple Confirmation
   drawCenteredText("ATTENDANCE LOGGED", W / 2, 94, 1, W - 20, C_MUTED);
 }
 
@@ -528,7 +521,6 @@ void renderErrorScreen() {
   if (!canvas) return;
   canvas->fillScreen(C_BG);
 
-  // Hero Card with Red Accent Frame
   canvas->fillRoundRect(6, 6, W - 12, H - 12, 6, C_CARD);
   canvas->drawRoundRect(6, 6, W - 12, H - 12, 6, C_RED);
 
@@ -578,6 +570,7 @@ void printHelp() {
   Serial.println("  1 / m      : Mark attendance (Simulated)");
   Serial.println("  0 / e      : Show error");
   Serial.println("  r          : Rotate screen 180 deg");
+  Serial.println("  b          : Turn off blue LED");
   Serial.println("  enroll <name> : Enroll finger");
   Serial.println("  w          : Toggle wifi status");
   Serial.println("  l          : List employees\n");
@@ -612,14 +605,14 @@ void processSerialCommand(String cmd) {
     prefs.putUChar("rot", nextRot);
     applyRotation(nextRot);
 
+  } else if (cmd.equalsIgnoreCase("b") || cmd.equalsIgnoreCase("led") || cmd.equalsIgnoreCase("blue")) {
+    turnOffBlueLED();
+    Serial.println("[LED] Blue LED turned OFF.");
+
   } else if (cmd.equalsIgnoreCase("w")) {
     wifiConnected = !wifiConnected;
     needsImmediateRedraw = true;
     Serial.printf("WiFi: %s\n", wifiConnected ? "ONLINE" : "OFFLINE");
-
-  } else if (cmd.equalsIgnoreCase("b") || cmd.equalsIgnoreCase("led") || cmd.equalsIgnoreCase("blue")) {
-    turnOffBlueLED();
-    Serial.println("[LED] Blue LED turned OFF.");
 
   } else if (cmd.equalsIgnoreCase("l")) {
     Serial.printf("\nEmployees (%d):\n", employeeCount);
@@ -666,7 +659,7 @@ void setup() {
     Serial.println("[SENSOR] Simulation mode active");
   }
 
-  // Turn off Blue LEDs immediately
+  // Force blue LED off
   turnOffBlueLED();
 
   printHelp();
@@ -674,7 +667,7 @@ void setup() {
 }
 
 // ----------------------------------------------------------------------------
-// MAIN LOOP
+// MAIN LOOP (ZERO BLINKING / ZERO FLICKER)
 // ----------------------------------------------------------------------------
 void loop() {
   unsigned long now = millis();
@@ -682,7 +675,8 @@ void loop() {
   // 1. Non-blocking Async Buzzer
   updateBuzzer();
 
-  // 2. Clock Tick (updates once per second, triggering steady redraw)
+  // 2. Clock Tick: Only redraws when the MINUTE changes!
+  // This prevents redrawing the screen every second and stops the blue LED from blinking!
   if (now - lastSecTick >= 1000) {
     lastSecTick = now;
     clockSec++;
@@ -693,9 +687,9 @@ void loop() {
         clockMin = 0;
         clockHour = (clockHour + 1) % 24;
       }
-    }
-    if (currentScreen == STATE_IDLE) {
-      needsImmediateRedraw = true; // Redraw once per second
+      if (currentScreen == STATE_IDLE) {
+        needsImmediateRedraw = true; // Redraw ONLY once per minute!
+      }
     }
   }
 
@@ -728,13 +722,13 @@ void loop() {
   lastBootButtonState = bootBtn;
 
   // 5. Optical Fingerprint Sensor:
-  // "if any keep finger it show marked"
+  // Polls gently and immediately turns off the sensor's optical LED so it doesn't blink
   if (sensorHardwareFound && currentScreen == STATE_IDLE) {
     static unsigned long lastSensorPoll = 0;
-    if (now - lastSensorPoll >= 50) { // Fast 50ms polling for instant touch detection
+    if (now - lastSensorPoll >= 120) {
       lastSensorPoll = now;
       int p = finger.getImage();
-      if (p == FINGERPRINT_OK) { // ANY finger placed on the glass!
+      if (p == FINGERPRINT_OK) { // Finger detected on glass!
         p = finger.image2Tz();
         uint16_t matchedSlot = 1;
         if (p == FINGERPRINT_OK) {
@@ -744,6 +738,9 @@ void loop() {
           }
         }
         triggerAttendancePunch(true, matchedSlot);
+      } else {
+        // Immediately silence sensor LED so it never flashes/blinks in idle
+        finger.LEDcontrol(false);
       }
     }
   }
@@ -792,7 +789,8 @@ void loop() {
           break;
       }
       tft.drawRGBBitmap(0, 0, canvas->getBuffer(), W, H);
-      turnOffBlueLED();
+      // Immediately force GPIO 2 (TFT_DC / ESP32 Blue LED) LOW so it never stays ON
+      digitalWrite(TFT_DC, LOW);
     }
   }
 
