@@ -2,6 +2,19 @@
 
 All notable changes to the Desk Buggy project will be documented in this file.
 
+## [1.2.0] - 2026-11-27
+
+### Added
+- **Biometric Attendance Terminal & Simulator (`tft-nothing-attendance/`)**:
+  - Minimalist high-contrast biometric terminal for 1.8" ST7735 Color TFT and ESP32.
+  - Multi-stage boot sequence: Welcome to Arigatoo, Developed by Infranex Dev, and WiFi provisioning / offline mode.
+  - Large-format digital clock with live ticking seconds and live network status.
+  - Instant touch verification: placing any finger on the optical sensor (or pressing BOOT button) immediately displays `✓ MARKED`.
+  - Non-blocking asynchronous buzzer engine preventing screen freezes during audio beeps.
+  - Dynamic 180-degree screen rotation toggle (`r` command) persisted to NVS flash.
+  - Flash-backed employee database (Joyboy, Alice, Pega) with runtime enrollment support.
+  - Full serial monitor CLI suite (`1`, `0`, `a`, `w`, `r`, `l`, `?`).
+
 ## [1.1.0] - 2026-11-17
 
 ### Added
