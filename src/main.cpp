@@ -10,8 +10,8 @@
 // ============================================================================
 // ARIGATOO // INFRANEX DEV // MINIMAL ATTENDANCE SYSTEM
 // ============================================================================
-// Clean, minimal, distraction-free UI.
-// Any finger placed on sensor or button press immediately shows MARKED.
+// Steady, distraction-free UI with ZERO flickering/blinking.
+// Rock-solid display that updates only on clock second ticks or finger touch.
 // ============================================================================
 
 // ---------- PIN DEFINITIONS (Standard ESP32 VSPI) ----------
@@ -93,17 +93,11 @@ bool lastPunchIsIn     = true;
 char enrollTargetName[24] = "Worker";
 uint16_t enrollTargetSlot = 1;
 
-// Animated scanner line
-int scanLineY = 2;
-int scanLineDir = 1;
-uint8_t pulseTick = 0;
-
 // Clock simulation
 int clockHour = 9;
 int clockMin  = 41;
 int clockSec  = 0;
 unsigned long lastSecTick = 0;
-unsigned long lastFrameTime = 0;
 
 // Button debounce for BOOT pin (GPIO 0)
 int lastBootButtonState = HIGH;
@@ -435,31 +429,27 @@ void startEnrollment(const String& nameArg, uint16_t slotArg) {
 }
 
 // ----------------------------------------------------------------------------
-// CLEAN, SIMPLE & RESPONSIVE RENDERING SCREENS
+// STEADY, MINIMAL RENDERING SCREENS (NO BLINKING / FLICKERING)
 // ----------------------------------------------------------------------------
 void renderIdleScreen() {
   if (!canvas) return;
   canvas->fillScreen(C_BG);
 
-  // 1. Top Bar: Clean minimal status (WiFi & Pulsing Dot)
+  // 1. Top Bar: Clean minimal status with STEADY indicator dot (NO BLINKING)
   canvas->setTextSize(1);
   if (wifiConnected) {
     canvas->setTextColor(C_GREEN);
     canvas->setCursor(10, 6);
     canvas->print("WIFI: OK");
+    canvas->fillCircle(W - 12, 9, 2, C_GREEN); // Steady solid green
   } else {
     canvas->setTextColor(C_MUTED);
     canvas->setCursor(10, 6);
     canvas->print("OFFLINE");
+    canvas->fillCircle(W - 12, 9, 2, C_AMBER); // Steady solid amber
   }
 
-  // Live pulsing green/white dot
-  pulseTick = (pulseTick + 1) % 40;
-  if (pulseTick < 20) {
-    canvas->fillCircle(W - 12, 9, 2, C_GREEN);
-  }
-
-  // 2. Center Hero: Large Crisp Digital Clock (TextSize 4)
+  // 2. Center Hero: Large Crisp Digital Clock (TextSize 4, Steady)
   char timeStr[8];
   snprintf(timeStr, sizeof(timeStr), "%02d:%02d", clockHour, clockMin);
   drawCenteredText(timeStr, W / 2, 28, 4, W - 10, C_WHITE);
@@ -469,26 +459,21 @@ void renderIdleScreen() {
   canvas->setTextColor(C_MUTED);
   drawCenteredText("THU, 27 NOV", W / 2, 66, 1, W - 20, C_MUTED);
 
-  // 3. Bottom Pill Card: "PLACE FINGER" (Clean, simple, responsive)
+  // 3. Bottom Pill Card: "PLACE FINGER" (Clean static reticle, NO BLINKING LASER)
   int pillY = 84;
   int pillH = 34;
   int pillW = W - 20;
   canvas->fillRoundRect(10, pillY, pillW, pillH, 5, C_CARD);
   canvas->drawRoundRect(10, pillY, pillW, pillH, 5, C_BORDER);
 
-  // Biometric reticle box (left inside pill)
+  // Clean static fingerprint reticle
   int retX = 18;
   int retY = pillY + 6;
   int retW = 22;
   int retH = 22;
   canvas->drawRect(retX, retY, retW, retH, C_BORDER);
-  canvas->drawCircle(retX + retW / 2, retY + retH / 2, 5, C_MUTED);
-
-  // Animated laser scan line
-  scanLineY += scanLineDir * 2;
-  if (scanLineY >= retH - 3) { scanLineY = retH - 3; scanLineDir = -1; }
-  if (scanLineY <= 2) { scanLineY = 2; scanLineDir = 1; }
-  canvas->drawFastHLine(retX + 2, retY + scanLineY, retW - 4, C_GREEN);
+  canvas->drawCircle(retX + retW / 2, retY + retH / 2, 6, C_GREEN);
+  canvas->drawCircle(retX + retW / 2, retY + retH / 2, 3, C_MUTED);
 
   // Clean prompt text
   canvas->setTextColor(C_WHITE);
@@ -674,7 +659,7 @@ void loop() {
   // 1. Non-blocking Async Buzzer
   updateBuzzer();
 
-  // 2. Clock Tick
+  // 2. Clock Tick (updates once per second, triggering steady redraw)
   if (now - lastSecTick >= 1000) {
     lastSecTick = now;
     clockSec++;
@@ -686,7 +671,9 @@ void loop() {
         clockHour = (clockHour + 1) % 24;
       }
     }
-    needsImmediateRedraw = true;
+    if (currentScreen == STATE_IDLE) {
+      needsImmediateRedraw = true; // Redraw once per second
+    }
   }
 
   // 3. Serial Monitor Commands
@@ -725,7 +712,6 @@ void loop() {
       lastSensorPoll = now;
       int p = finger.getImage();
       if (p == FINGERPRINT_OK) { // ANY finger placed on the glass!
-        // Search if already enrolled
         p = finger.image2Tz();
         uint16_t matchedSlot = 1;
         if (p == FINGERPRINT_OK) {
@@ -734,7 +720,6 @@ void loop() {
             matchedSlot = finger.fingerID;
           }
         }
-        // Always mark attendance when any finger is placed
         triggerAttendancePunch(true, matchedSlot);
       }
     }
@@ -757,10 +742,9 @@ void loop() {
     needsImmediateRedraw = true;
   }
 
-  // 7. 50 FPS Screen Refresh
-  if (needsImmediateRedraw || (now - lastFrameTime >= 20)) {
+  // 7. Event-driven Screen Refresh (ZERO FLICKER, ZERO BLINKING)
+  if (needsImmediateRedraw) {
     needsImmediateRedraw = false;
-    lastFrameTime = now;
 
     if (canvas) {
       switch (currentScreen) {
@@ -788,5 +772,5 @@ void loop() {
     }
   }
 
-  delay(1);
+  delay(2);
 }
