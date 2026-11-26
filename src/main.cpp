@@ -57,6 +57,9 @@ char lastPunchTime[16] = "09:41 AM";
 bool lastPunchIsIn     = true; // Amber Orange (#FFAA00)
 
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+HardwareSerial fpSerial(2);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&fpSerial);
+bool sensorHardwareFound = false;
 GFXcanvas16* canvas = nullptr;
 int W = 160;
 int H = 128;
