@@ -229,6 +229,12 @@ void setup() {
   }
   beepAsync(40);
   delay(140);
+  for (int p = 0; p <= 100; p += 25) {
+    renderBootStage("INFRANEX DEV", "FIRMWARE READY", p);
+    delay(20);
+  }
+  beepAsync(50);
+  delay(140);
   pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(BUZZER_PIN, LOW);
   loadEmployeeDatabase();
